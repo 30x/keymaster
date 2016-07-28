@@ -3,3 +3,10 @@ import:
 - package: github.com/Sirupsen/logrus
 - package: gopkg.in/yaml.v2
 - package: github.com/spf13/viper
+testImport:
+- package: github.com/onsi/ginkgo/ginkgo
+  vcs: git
+- package: github.com/onsi/gomega
+  vcs: git
+- package: github.com/tnine/mockhttpserver
+  vcs: git
