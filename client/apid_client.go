@@ -51,6 +51,7 @@ func CreateApidClient(apidHostPath string, downloadDirectory string) (*ApidClien
 type DeploymentResponse struct {
 	DeploymentID string                     `json:"deploymentId"`
 	Bundles      []DeploymentBundleResponse `json:"bundles"`
+	ETag         string
 }
 
 //DeploymentBundleResponse the bundle to deploy in a response
@@ -108,7 +109,11 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 		return nil, fmt.Errorf("Could not poll deployments Status code is %d with body %s.", resp.StatusCode, string(errorBody))
 	}
 
-	deploymentResponse := &DeploymentResponse{}
+	responseETag := resp.Header.Get("ETag")
+
+	deploymentResponse := &DeploymentResponse{
+		ETag: responseETag,
+	}
 
 	err = json.NewDecoder(resp.Body).Decode(deploymentResponse)
 

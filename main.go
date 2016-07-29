@@ -30,7 +30,7 @@ func main() {
 	cacheDir := v.GetString(ConfigCacheDirectory)
 	timeout := v.GetInt(ConfigPollWait)
 
-	cache, err := keymaster.CreateBundleCache(apidURI, cacheDir)
+	cache, err := keymaster.CreateBundleCache(apidURI, cacheDir, timeout)
 
 	if err != nil {
 		log.Fatalf("Could not create cache.  Error is %s", err)
@@ -57,6 +57,6 @@ func main() {
 	}
 }
 
-func writeConfig(bundles []keymaster.Bundle) {
+func writeConfig(bundles []*keymaster.DeploymentBundle) {
 
 }
