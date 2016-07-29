@@ -13,7 +13,8 @@ const (
 	//ConfigApidURI defualt config value for the apid location
 	ConfigApidURI = "apid_uri"
 	//ConfigPollWait the number of seconds to wait after successfully polling apid before polling again
-	ConfigPollWait = "apid_poll_wait"
+	ConfigPollWait       = "apid_poll_wait"
+	ConfigCacheDirectory = "cache_directory"
 )
 
 func main() {
@@ -23,12 +24,16 @@ func main() {
 	v.AutomaticEnv()
 	v.SetDefault(ConfigApidURI, "http://localhost:8181")
 	v.SetDefault(ConfigPollWait, "5")
+	v.SetDefault(ConfigCacheDirectory, "/tmp/apidBundleCache")
 
 	apidURI := v.GetString(ConfigApidURI)
+	cacheDir := v.GetString(ConfigCacheDirectory)
 	timeout := v.GetInt(ConfigPollWait)
 
-	cache := &keymaster.BundleCache{
-		ApidURI: apidURI,
+	cache, err := keymaster.CreateBundleCache(apidURI, cacheDir)
+
+	if err != nil {
+		log.Fatalf("Could not create cache.  Error is %s", err)
 	}
 
 	//loop forever writing configs
