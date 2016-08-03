@@ -38,3 +38,27 @@ func findError(errType string, message []byte) error {
 	}
 	return nil
 }
+
+func Start(prefixPath, configFilePath string) error {
+	out, err := exec.Command("nginx", "-p", prefixPath, "-c", configFilePath).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf(string(out))
+	}
+	return nil
+}
+
+func Stop(prefixPath string) error {
+	out, err := exec.Command("nginx", "-p", prefixPath, "-s", "stop").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf(string(out))
+	}
+	return nil
+}
+
+func Reload(prefixPath, configFilePath string) error {
+	out, err := exec.Command("nginx", "-p", prefixPath, "-c", configFilePath, "-s", "reload").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf(string(out))
+	}
+	return nil
+}
