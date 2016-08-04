@@ -1,4 +1,4 @@
-package: github.com/30x/gozerian
+package: github.com/30x/keymaster
 import:
 - package: github.com/Sirupsen/logrus
 - package: gopkg.in/yaml.v2

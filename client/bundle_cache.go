@@ -1,4 +1,6 @@
-package keymaster
+package client
+
+import "fmt"
 
 //BundleCache the type that represents the cache of bundles
 type BundleCache struct {
@@ -51,8 +53,11 @@ func (bundleCache *BundleCache) GetBundles() ([]*DeploymentBundle, error) {
 		//it's not local get it from the server
 		if !ok {
 
-			bundle, err := bundleCache.client.GetBundle(&bundleEntry)
+			bundle, err = bundleCache.client.GetBundle(bundleEntry)
 
+			if bundle == nil {
+				return nil, fmt.Errorf("Bundle %+v could not be found, and was returned in the deployment", bundleEntry)
+			}
 			if err != nil {
 				return nil, err
 			}

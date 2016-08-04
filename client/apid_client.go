@@ -1,4 +1,4 @@
-package keymaster
+package client
 
 import (
 	"encoding/json"
@@ -63,7 +63,7 @@ type DeploymentBundleResponse struct {
 
 //DeploymentBundle The actual deployment bundle with the file data present
 type DeploymentBundle struct {
-	*DeploymentBundleResponse
+	DeploymentBundleResponse
 	File *os.File
 }
 
@@ -85,6 +85,7 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 	if timeout > 0 {
 		req.Header.Add("block", string(timeout))
 	}
+	req.Header.Add("Accept", "application/zip")
 
 	resp, err := apidClient.client.Do(req)
 
@@ -125,8 +126,10 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 }
 
 //GetBundle Get the bundle url result and write it to disk.  Returns a file pointer to the written file, or an error if the download did not occur.
-func (apidClient *ApidClient) GetBundle(bundle *DeploymentBundleResponse) (*DeploymentBundle, error) {
+func (apidClient *ApidClient) GetBundle(bundle DeploymentBundleResponse) (*DeploymentBundle, error) {
 	req, err := http.NewRequest("GET", bundle.URL, nil)
+
+	req.Header.Add("Accept", "application/zip")
 
 	resp, err := apidClient.client.Do(req)
 
@@ -159,9 +162,12 @@ func (apidClient *ApidClient) GetBundle(bundle *DeploymentBundleResponse) (*Depl
 
 	io.Copy(file, resp.Body)
 
-	return &DeploymentBundle{
-		DeploymentBundleResponse: bundle,
-		File: file,
-	}, nil
+	deploymentBundle :=
+		&DeploymentBundle{
+			DeploymentBundleResponse: bundle,
+			File: file,
+		}
+
+	return deploymentBundle, nil
 
 }

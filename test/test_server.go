@@ -2,9 +2,13 @@ package test
 
 import (
 	"encoding/json"
+	"log"
+	"strings"
 
 	"github.com/tnine/mockhttpserver"
 )
+
+const host = "localhost:9000"
 
 //MockApidServer the container type for our test server
 type MockApidServer struct {
@@ -20,6 +24,7 @@ type GetBundlesResponse struct {
 type Bundle struct {
 	BundleID string `json:"bundleId"`
 	URL      string `json:"url"`
+	AuthCode string `json:"authCode"`
 }
 
 //CreateMockApidServer create a mock apid server
@@ -30,7 +35,7 @@ func CreateMockApidServer() *MockApidServer {
 }
 
 //CreateGetBundles Create a get bundle request that returns the specified http status and body.  Does not make use of the If-Non-Match or block headers.
-func (mockServer *MockApidServer) CreateGetBundles(status int, bundles []Bundle) error {
+func (mockServer *MockApidServer) CreateGetBundles(status int, bundles []Bundle, timeout int) error {
 
 	response := GetBundlesResponse{
 		Bundles: bundles,
@@ -42,8 +47,15 @@ func (mockServer *MockApidServer) CreateGetBundles(status int, bundles []Bundle)
 		return err
 	}
 
+	log.Printf("Resposne data is %s", string(data))
+
 	//set this up
-	mockServer.server.NewGet("/bundles").ToResponse(status, data)
+	mockServer.server.NewGet("/deployments/current").ToResponse(status, data).Add()
+
+	// if timeout > 0 {
+	// 	timeoutValue := fmt.Sprintf("%d", timeout)
+	// 	get = get.AddHeader("block", timeoutValue)
+	// }
 
 	return nil
 }
@@ -51,13 +63,14 @@ func (mockServer *MockApidServer) CreateGetBundles(status int, bundles []Bundle)
 //CreateGetBundle return the bundle bytes
 func (mockServer *MockApidServer) CreateGetBundle(status int, bundleURL string, body []byte) {
 
-	mockServer.server.NewGet(bundleURL).AddHeader("Accept", "application/x-tar").ToResponse(status, body)
+	withoutServer := strings.Replace(bundleURL, "http://"+host, "", -1)
+	mockServer.server.NewGet(withoutServer).ToResponse(status, body).Add()
 
 }
 
 //Start start the mock server
 func (mockServer *MockApidServer) Start() {
-	mockServer.server.Listen("localhost:")
+	mockServer.server.StartAsync(host)
 }
 
 //Stop start the mock server
