@@ -2,8 +2,8 @@ package test
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
-	"strings"
 
 	"github.com/tnine/mockhttpserver"
 )
@@ -17,7 +17,8 @@ type MockApidServer struct {
 
 //GetBundlesResponse the response json to the get bundles
 type GetBundlesResponse struct {
-	Bundles []Bundle `json:"bundles"`
+	DeploymentID string   `json:"deploymentId"`
+	Bundles      []Bundle `json:"bundles"`
 }
 
 //Bundle metadata information
@@ -35,10 +36,11 @@ func CreateMockApidServer() *MockApidServer {
 }
 
 //CreateGetBundles Create a get bundle request that returns the specified http status and body.  Does not make use of the If-Non-Match or block headers.
-func (mockServer *MockApidServer) CreateGetBundles(status int, bundles []Bundle, timeout int) error {
+func (mockServer *MockApidServer) CreateGetBundles(status int, deploymentID string, bundles []Bundle, timeout int) error {
 
 	response := GetBundlesResponse{
-		Bundles: bundles,
+		DeploymentID: deploymentID,
+		Bundles:      bundles,
 	}
 
 	data, err := json.Marshal(response)
@@ -60,12 +62,10 @@ func (mockServer *MockApidServer) CreateGetBundles(status int, bundles []Bundle,
 	return nil
 }
 
-//CreateGetBundle return the bundle bytes
-func (mockServer *MockApidServer) CreateGetBundle(status int, bundleURL string, body []byte) {
-
-	withoutServer := strings.Replace(bundleURL, "http://"+host, "", -1)
-	mockServer.server.NewGet(withoutServer).ToResponse(status, body).Add()
-
+//MockDeployment mock a response to the deployment
+func (mockServer *MockApidServer) MockDeployment(deploymentID string, status int, body []byte) {
+	url := fmt.Sprintf("/deployments/%s", deploymentID)
+	mockServer.server.NewPost(url, "application/json", nil).ToResponse(status, body).Add()
 }
 
 //Start start the mock server

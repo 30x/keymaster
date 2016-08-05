@@ -10,9 +10,11 @@ type BundleCache struct {
 	client   *ApidClient
 }
 
-// //Bundle the type of the bundle to return
-// //TODO, not sure if this is even neccessary
-// type Bundle
+//Deployment an ecapsulation of a deployment that has been locally cached from apid
+type Deployment struct {
+	ID      string
+	Bundles []*DeploymentBundle
+}
 
 //CreateBundleCache create the bundle cache
 func CreateBundleCache(apidURL string, workingDirectory string, timeout int) (*BundleCache, error) {
@@ -33,8 +35,10 @@ func CreateBundleCache(apidURL string, workingDirectory string, timeout int) (*B
 
 }
 
+//TODO we need to clean up the local file system if it's not the current deployment
+
 //GetBundles returns all bundles via a channel.  Blocks until a change in the bundle set is detected
-func (bundleCache *BundleCache) GetBundles() ([]*DeploymentBundle, error) {
+func (bundleCache *BundleCache) GetBundles() (*Deployment, error) {
 
 	response, err := bundleCache.client.PollDeployments(bundleCache.lastEtag, bundleCache.timeout)
 
@@ -71,6 +75,10 @@ func (bundleCache *BundleCache) GetBundles() ([]*DeploymentBundle, error) {
 	}
 
 	//TODO reap old map entries, possibly eliminate the slice and return map values
+	deployment := &Deployment{
+		ID:      response.DeploymentID,
+		Bundles: bundles,
+	}
 
-	return bundles, nil
+	return deployment, nil
 }

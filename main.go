@@ -30,7 +30,7 @@ func main() {
 	cacheDir := v.GetString(ConfigCacheDirectory)
 	timeout := v.GetInt(ConfigPollWait)
 
-	cache, err := keymaster.CreateBundleCache(apidURI, cacheDir, timeout)
+	cache, err := client.CreateBundleCache(apidURI, cacheDir, timeout)
 
 	if err != nil {
 		log.Fatalf("Could not create cache.  Error is %s", err)
@@ -41,7 +41,7 @@ func main() {
 
 		log.Printf("Attempting to load bundles from cache")
 
-		bundles, err := cache.GetBundles()
+		deployment, err := cache.GetBundles()
 
 		if err != nil {
 			log.Printf("Error occured getting bundle from cache.  Error is :%s", err)
@@ -49,14 +49,12 @@ func main() {
 			continue
 		}
 
-		if len(bundles) > 0 {
-			writeConfig(bundles)
-		}
+		writeConfig(deployment)
 
 		time.Sleep(time.Second * time.Duration(timeout))
 	}
 }
 
-func writeConfig(bundles []*keymaster.DeploymentBundle) {
+func writeConfig(deployment *client.Deployment) {
 
 }

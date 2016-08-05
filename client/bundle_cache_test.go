@@ -2,8 +2,11 @@ package client_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/30x/keymaster/client"
 	"github.com/30x/keymaster/test"
@@ -13,14 +16,17 @@ import (
 
 var _ = Describe("Bundle Tests", func() {
 
-	It("Initial Load Empty Cache", func() {
+	FIt("Initial Load Empty Cache", func() {
 
 		//start the mock api server
 
 		timeout := 10
 
 		bundleNames := []string{"1", "2", "3", "4", "5"}
-		mockApiServer := createBundles(bundleNames, timeout)
+
+		deploymentID := "deployment1"
+
+		mockApiServer := createBundles(deploymentID, bundleNames, timeout)
 		mockApiServer.Start()
 		defer mockApiServer.Stop()
 
@@ -30,9 +36,13 @@ var _ = Describe("Bundle Tests", func() {
 
 		Expect(err).Should(BeNil())
 
-		bundles, err := cache.GetBundles()
+		deployment, err := cache.GetBundles()
 
 		Expect(err).Should(BeNil())
+
+		Expect(deployment.ID).Should(Equal(deploymentID))
+
+		bundles := deployment.Bundles
 
 		Expect(len(bundles)).Should(Equal(len(bundleNames)))
 
@@ -45,7 +55,7 @@ var _ = Describe("Bundle Tests", func() {
 			Expect(bundle.BundleID).Should(Equal(bundleID))
 			Expect(len(bundle.AuthCode) > 0).Should(BeTrue())
 
-			expected := fmt.Sprintf("http://localhost:9000/bundles/%s", bundleID)
+			expected := fmt.Sprintf("file:///tmp/keymaster-test/bundles/%s", bundleID)
 
 			Expect(bundle.URL).Should(Equal(expected))
 
@@ -53,10 +63,14 @@ var _ = Describe("Bundle Tests", func() {
 
 			file := bundle.File
 
-			expectedName := fmt.Sprintf("/tmp/initialloadbundles/%s", bundleID)
+			expectedName := fmt.Sprintf("/tmp/keymaster-test/bundles/%s", bundleID)
 			Expect(file.Name()).Should(Equal(expectedName))
 
 		}
+
+	})
+
+	It("Ack client bundle", func() {
 
 	})
 
@@ -69,29 +83,43 @@ var _ = Describe("Bundle Tests", func() {
 	})
 })
 
-func createBundles(bundleIds []string, timeout int) *test.MockApidServer {
+func createBundles(deploymentId string, bundleIds []string, timeout int) *test.MockApidServer {
 	//pre allocate
 	bundles := make([]test.Bundle, len(bundleIds))
 
 	for i, bundleId := range bundleIds {
-		url := fmt.Sprintf("http://localhost:9000/bundles/%s", bundleId)
+		url := fmt.Sprintf("file:///tmp/keymaster-test/bundles/%s", bundleId)
 
 		bundles[i] = test.Bundle{BundleID: bundleId, URL: url, AuthCode: fmt.Sprintf("%d", i)}
+
+		//copy the bundle over
+		src, err := os.Open("../test/testbundle.zip")
+
+		Expect(err).Should(BeNil())
+
+		targetFile := strings.Replace(url, "file://", "", -1)
+
+		targetDir := filepath.Dir(targetFile)
+
+		err = os.MkdirAll(targetDir, 0770)
+
+		Expect(err).Should(BeNil())
+
+		target, err := os.Create(targetFile)
+
+		Expect(err).Should(BeNil())
+
+		_, err = io.Copy(src, target)
+
+		Expect(err).Should(BeNil())
+		src.Close()
+		target.Close()
+
 	}
 
 	mockApiServer := test.CreateMockApidServer()
 
-	mockApiServer.CreateGetBundles(http.StatusOK, bundles, timeout)
-
-	//return the zip file in the test dir.  Eventually we'll want to change this
-	for _, bundle := range bundles {
-		bytes, err := ioutil.ReadFile("../test/testbundle.zip")
-
-		Expect(err).Should(BeNil())
-
-		//set up the bundle
-		mockApiServer.CreateGetBundle(http.StatusOK, bundle.URL, bytes)
-	}
+	mockApiServer.CreateGetBundles(http.StatusOK, deploymentId, bundles, timeout)
 
 	return mockApiServer
 
