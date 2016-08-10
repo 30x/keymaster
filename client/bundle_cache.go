@@ -82,3 +82,8 @@ func (bundleCache *BundleCache) GetBundles() (*Deployment, error) {
 
 	return deployment, nil
 }
+
+//Client return the client
+func (bundleCache *BundleCache) Client() *ApidClient {
+	return bundleCache.client
+}

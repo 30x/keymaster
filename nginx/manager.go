@@ -1,26 +1,34 @@
 package nginx
 
-import "github.com/30x/keymaster/client"
+import (
+	"fmt"
+
+	"log"
+	"os"
+
+	"github.com/30x/keymaster/client"
+)
 
 //Manager The config manager
 type Manager struct {
-	bundleCache        *client.BundleCache
-	lastApidDeployment *client.Deployment
+	bundleCache *client.BundleCache
+	nginxDir    string
 
+	//state of last successful deployment
+	lastApidDeployment     *client.Deployment
 	lastUnzippedDeployment *UnzippedDeployment
 }
 
 //UnzippedDeployment a struct representing a deployment that has been unzipped
 type UnzippedDeployment struct {
 	targetDir string
-	//targetBundles some kind of object per bundle?
-
 }
 
 //NewManager Create a new instance of the configuration manager
-func NewManager(bundleCache *client.BundleCache) *Manager {
+func NewManager(bundleCache *client.BundleCache, nginxDir string) *Manager {
 	return &Manager{
 		bundleCache: bundleCache,
+		nginxDir:    nginxDir,
 	}
 }
 
@@ -59,11 +67,39 @@ func (manager *Manager) ApplyDeployment() error {
 
 	//test nginx with the processed templates/new configs.  TODO warnings constitute a failure
 
-	//reload nginx
+	systemFile := fmt.Sprintf("%s/%s", unzipped.targetDir, "nginx.conf")
+	err = TestConfig(systemFile)
 
-	//reset pointers to last
+	if err != nil {
+		manager.deploymentFailed(deployment, err)
+		return err
+	}
+
+	//reload or start nginx if not running
+	//TODO detect start state from PID
+
+	err = Reload(manager.nginxDir, systemFile)
+
+	if err != nil {
+		manager.deploymentFailed(deployment, err)
+		return err
+	}
+
+	//reset pointers to last for our next invocation
+
+	previousUnzipped := manager.lastUnzippedDeployment
+
+	manager.lastApidDeployment = deployment
+	manager.lastUnzippedDeployment = &unzipped
 
 	//cleanup old last from file system
+
+	err = os.RemoveAll(previousUnzipped.targetDir)
+
+	//swallow this error, it shouldn't blow up our process
+	if err != nil {
+		log.Printf("Unable to remove directory %s.  Error is %s", previousUnzipped.targetDir, err)
+	}
 
 	//TODO add a template where the deployment.ID is returned at localhost:5280/ to validate we're actually running and get the status of the system
 
@@ -71,12 +107,41 @@ func (manager *Manager) ApplyDeployment() error {
 
 }
 
-func (manager *Manager) deploymentFailed(deployment *client.Deployment) {
+func (manager *Manager) deploymentFailed(deployment *client.Deployment, err error) {
+	deploymentResult := &client.DeploymentResult{
+		ID: deployment.ID,
+	}
 
+	if err != nil {
+		deploymentResult.Errors = []*client.DeploymentError{
+			&client.DeploymentError{
+				//todo, how can we tell which bundle failed?
+				BundleID:  "",
+				ErrorCode: "",
+				Reason:    err.Error(),
+			},
+		}
+	}
+
+	setErr := manager.bundleCache.Client().SetDeploymentResult(deploymentResult)
+
+	if setErr != nil {
+		log.Printf("Error calling apid. Not setting failure %s", setErr)
+		//TODO if we can't set our status, should we fail here and restart?
+	}
 }
 
-func (manager *Manager) deploymentComplete(deployment *client.Deployment) {
+func (manager *Manager) deploymentComplete(deployment *client.Deployment, err error) {
+	deploymentResult := &client.DeploymentResult{
+		ID: deployment.ID,
+	}
 
+	setErr := manager.bundleCache.Client().SetDeploymentResult(deploymentResult)
+
+	if setErr != nil {
+		log.Printf("Error calling apid. Not setting success %s", setErr)
+		//TODO if we can't set our status, should we fail here and restart?
+	}
 }
 
 //UnzipBundle  unzip the deployment and return the struct with the info for the directory and bundle
