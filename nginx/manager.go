@@ -16,12 +16,7 @@ type Manager struct {
 
 	//state of last successful deployment
 	lastApidDeployment     *client.Deployment
-	lastUnzippedDeployment *UnzippedDeployment
-}
-
-//UnzippedDeployment a struct representing a deployment that has been unzipped
-type UnzippedDeployment struct {
-	targetDir string
+	lastUnzippedDeployment string
 }
 
 //NewManager Create a new instance of the configuration manager
@@ -58,23 +53,13 @@ func (manager *Manager) ApplyDeployment() error {
 
 	//unzip bundles to bundle id directlry
 
-	unzipped, unzipErr := UnzipBundle(deployment)
-
-	if unzipErr != nil {
-		return unzipErr
-	}
+	unzippedDir, errors := Stage(deployment)
 
 	//perform template processing
 
-	processingError := ProcessTemplates(unzipped)
-
-	if processingError != nil {
-		return processingError
-	}
-
 	//test nginx with the processed templates/new configs.  TODO warnings constitute a failure
 
-	systemFile := fmt.Sprintf("%s/%s", unzipped.targetDir, "nginx.conf")
+	systemFile := fmt.Sprintf("%s/%s", unzippedDir, "nginx.conf")
 	err = TestConfig(systemFile)
 
 	if err != nil {
@@ -97,15 +82,15 @@ func (manager *Manager) ApplyDeployment() error {
 	previousUnzipped := manager.lastUnzippedDeployment
 
 	manager.lastApidDeployment = deployment
-	manager.lastUnzippedDeployment = unzipped
+	manager.lastUnzippedDeployment = unzippedDir
 
 	//cleanup old last from file system
 
-	err = os.RemoveAll(previousUnzipped.targetDir)
+	err = os.RemoveAll(previousUnzipped)
 
 	//swallow this error, it shouldn't blow up our process
 	if err != nil {
-		log.Printf("Unable to remove directory %s.  Error is %s", previousUnzipped.targetDir, err)
+		log.Printf("Unable to remove directory %s.  Error is %s", previousUnzipped, err)
 	}
 
 	//TODO add a template where the deployment.ID is returned at localhost:5280/ to validate we're actually running and get the status of the system

@@ -9,6 +9,11 @@ import (
 	"github.com/30x/keymaster/util"
 )
 
+//Stage unzip, process templates, and validate the deployment
+func Stage(deployment *client.Deployment) (extractedDirectory string, errors []*client.DeploymentError) {
+	return "", nil
+}
+
 //UnzipBundle  unzip the deployment and return the struct with the info for the directory and bundle
 func UnzipBundle(deployment *client.Deployment) (*UnzippedDeployment, error) {
 
