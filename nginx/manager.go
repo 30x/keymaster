@@ -2,10 +2,8 @@ package nginx
 
 import (
 	"fmt"
-
 	"log"
 	"os"
-
 	"github.com/30x/keymaster/client"
 )
 
@@ -98,7 +96,7 @@ func (manager *Manager) ApplyDeployment() error {
 	previousUnzipped := manager.lastUnzippedDeployment
 
 	manager.lastApidDeployment = deployment
-	manager.lastUnzippedDeployment = &unzipped
+	manager.lastUnzippedDeployment = unzipped
 
 	//cleanup old last from file system
 
@@ -162,14 +160,4 @@ func (manager *Manager) deploymentComplete(deployment *client.Deployment, err er
 		log.Printf("Error calling apid. Not setting success %s", setErr)
 		//TODO if we can't set our status, should we fail here and restart?
 	}
-}
-
-//UnzipBundle  unzip the deployment and return the struct with the info for the directory and bundle
-func UnzipBundle(deployment *client.Deployment) (UnzippedDeployment, error) {
-	return UnzippedDeployment{}, nil
-}
-
-//ProcessTemplates Process the bundle templates.  Return an error if one occurs
-func ProcessTemplates(unzippedDeployment UnzippedDeployment) error {
-	return nil
 }
