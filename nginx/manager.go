@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+
 	"github.com/30x/keymaster/client"
 )
 
@@ -77,7 +78,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = TestConfig(systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, []*client.DeploymentBundle{}, err)
+		manager.deploymentFailed(deployment, nil)
 		return err
 	}
 
@@ -87,7 +88,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = Reload(manager.nginxDir, systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, []*client.DeploymentBundle{}, err)
+		manager.deploymentFailed(deployment, nil)
 		return err
 	}
 
@@ -113,31 +114,14 @@ func (manager *Manager) ApplyDeployment() error {
 
 }
 
-func (manager *Manager) deploymentFailed(deployment *client.Deployment, failedBundles []*client.DeploymentBundle, err error) {
+func (manager *Manager) deploymentFailed(deployment *client.Deployment, failedBundles []*client.DeploymentError) {
 	deploymentResult := &client.DeploymentResult{
 		ID: deployment.ID,
 	}
 
 	status := client.StatusSuccess
-	errorMessage := ""
 
-	if err != nil {
-		errorMessage = err.Error()
-		status = client.StatusFail
-	}
-
-	deploymentResult.Errors = []*client.DeploymentError{}
-
-	for _, failedBundle := range failedBundles {
-		deployError := &client.DeploymentError{
-			//todo, how can we tell which bundle failed?
-			BundleID:  failedBundle.BundleID,
-			ErrorCode: errorMessage,
-			Reason:    errorMessage,
-		}
-
-		deploymentResult.Errors = append(deploymentResult.Errors, deployError)
-	}
+	deploymentResult.Errors = failedBundles
 
 	deploymentResult.Status = status
 

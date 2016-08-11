@@ -1,11 +1,12 @@
 package nginx
 
 import (
-	"github.com/30x/keymaster/client"
-	"github.com/30x/keymaster/util"
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/30x/keymaster/client"
+	"github.com/30x/keymaster/util"
 )
 
 //UnzipBundle  unzip the deployment and return the struct with the info for the directory and bundle
@@ -20,7 +21,7 @@ func UnzipBundle(deployment *client.Deployment) (*UnzippedDeployment, error) {
 
 		bundleDir, err := ioutil.TempDir(deploymentDir, "bundle_"+bundle.BundleID)
 
-		err = util.Unzip(bundle.File.Name(), bundleDir)
+		err = util.Unzip(bundle.LocalFile, bundleDir)
 		if err != nil {
 			return nil, err // todo: specific err identifying bundle
 		}
