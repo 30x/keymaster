@@ -3,39 +3,45 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 )
 
 //ApidClient the client factory.  Use the CreateApidClient function to perform validation.
 type ApidClient struct {
-	apidHostPath      string
-	downloadDirectory string
-	client            *http.Client
+	apidHostPath string
+	client       *http.Client
 }
 
-//DeploymentResponse the response to a deployment
-type DeploymentResponse struct {
-	DeploymentID string                     `json:"deploymentId"`
-	Bundles      []DeploymentBundleResponse `json:"bundles"`
-	ETag         string
+//DeploymentType the type of demployment
+type DeploymentType string
+
+const (
+	//SystemType the type of bundle for a system bundle
+	SystemType = "system"
+
+	//DependentType the type of the bundle when it is a user defined type
+	DependentType = "dependent"
+)
+
+//Deployment the type of deployment to return
+type Deployment struct {
+	ETAG    string
+	ID      string              `json:"deploymentId"`
+	Bundles []*DeploymentBundle `json:"bundles"`
 }
 
-//DeploymentBundleResponse the bundle to deploy in a response
-type DeploymentBundleResponse struct {
-	BundleID string `json:"bundleId"`
-	AuthCode string `json:"authCode"`
-	URL      string `json:"url"`
-}
-
-//DeploymentBundle The actual deployment bundle with the file data present
+//DeploymentBundle the bundle to deploy in a response
 type DeploymentBundle struct {
-	DeploymentBundleResponse
-	File *os.File
+	BundleID string         `json:"bundleId"`
+	AuthCode string         `json:"authCode"`
+	URL      string         `json:"url"`
+	Type     DeploymentType `json:"type"`
+
+	//the path on the local system to the file in the url
+	LocalFile string
 }
 
 //DeploymentResult the result of a deployment
@@ -61,43 +67,24 @@ type DeploymentStatus string
 
 const (
 	//StatusFail the deployment failed
-	StatusFail = "FAIL"
+	StatusFail DeploymentStatus = "FAIL"
 	//StatusSuccess the deployment succeeded.
-	StatusSuccess = "SUCCESS"
+	StatusSuccess DeploymentStatus = "SUCCESS"
 )
 
 //CreateApidClient create the client and validate the input
-func CreateApidClient(apidHostPath string, downloadDirectory string) (*ApidClient, error) {
-	dirInfo, err := os.Stat(downloadDirectory)
-
-	if err != nil {
-
-		//if it's a not exist error, we want to create it.  Otherwise, just return it
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-
-		err := os.MkdirAll(downloadDirectory, 0700)
-
-		if err != nil {
-			return nil, err
-		}
-
-	} else if !dirInfo.IsDir() {
-		return nil, errors.New("Expected download directory to be a directory, it is not")
-	}
+func CreateApidClient(apidHostPath string) (*ApidClient, error) {
 
 	//return the apid client
 	return &ApidClient{
-		apidHostPath:      apidHostPath,
-		downloadDirectory: downloadDirectory,
-		client:            &http.Client{},
+		apidHostPath: apidHostPath,
+		client:       &http.Client{},
 	}, nil
 }
 
 //PollDeployments poll the deployments fromthe apidHostPath with the etag (optional) and timeout (0 for none)
 //returns the deployment response, or an error if one occurs.  A nil deploymentresponse indicates a timeout on polling (TODO, should this be a custom error?)
-func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*DeploymentResponse, error) {
+func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deployment, error) {
 
 	url := apidClient.apidHostPath + "/deployments/current"
 	req, err := http.NewRequest("GET", url, nil)
@@ -140,8 +127,8 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 
 	responseETag := resp.Header.Get("ETag")
 
-	deploymentResponse := &DeploymentResponse{
-		ETag: responseETag,
+	deploymentResponse := &Deployment{
+		ETAG: responseETag,
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(deploymentResponse)
@@ -150,29 +137,12 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 		return nil, err
 	}
 
-	return deploymentResponse, nil
-}
-
-//GetBundle Get the bundle url result and write it to disk.  Returns a file pointer to the written file, or an error if the download did not occur.
-func (apidClient *ApidClient) GetBundle(bundle DeploymentBundleResponse) (*DeploymentBundle, error) {
-	//we're good, copy the data into a file
-
-	filePath := strings.Replace(bundle.URL, "file://", "", -1)
-
-	file, err := os.Open(filePath)
-
-	if err != nil {
-		return nil, err
+	//link up the files
+	for _, bundle := range deploymentResponse.Bundles {
+		bundle.LocalFile = strings.Replace(bundle.URL, "file://", "", -1)
 	}
 
-	deploymentBundle :=
-		&DeploymentBundle{
-			DeploymentBundleResponse: bundle,
-			File: file,
-		}
-
-	return deploymentBundle, nil
-
+	return deploymentResponse, nil
 }
 
 //SetDeploymentResult set the result of the deployment.  Returns an error if the call was unsuccessful

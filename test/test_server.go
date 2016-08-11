@@ -26,6 +26,7 @@ type Bundle struct {
 	BundleID string `json:"bundleId"`
 	URL      string `json:"url"`
 	AuthCode string `json:"authCode"`
+	Type     string `json:"type"`
 }
 
 //CreateMockApidServer create a mock apid server

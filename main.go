@@ -14,8 +14,7 @@ const (
 	//ConfigApidURI defualt config value for the apid location
 	ConfigApidURI = "apid_uri"
 	//ConfigPollWait the number of seconds to wait after successfully polling apid before polling again
-	ConfigPollWait       = "apid_poll_wait"
-	ConfigCacheDirectory = "cache_directory"
+	ConfigPollWait = "apid_poll_wait"
 
 	//ConfigNginxDir the directory that nginx is located in
 	ConfigNginxDir = "nginx_dir"
@@ -28,23 +27,21 @@ func main() {
 	v.AutomaticEnv()
 	v.SetDefault(ConfigApidURI, "http://localhost:8181")
 	v.SetDefault(ConfigPollWait, "5")
-	v.SetDefault(ConfigCacheDirectory, "/tmp/apidBundleCache")
 
 	//use openresty for now.  Must have LUAJIT installed
 	v.SetDefault(ConfigNginxDir, " /usr/local/Cellar/openresty/1.9.15.1/")
 
 	apidURI := v.GetString(ConfigApidURI)
-	cacheDir := v.GetString(ConfigCacheDirectory)
 	timeout := v.GetInt(ConfigPollWait)
 	nginxDir := v.GetString(ConfigNginxDir)
 
-	cache, err := client.CreateBundleCache(apidURI, cacheDir, timeout)
+	cache, err := client.CreateApidClient(apidURI)
 
 	if err != nil {
 		log.Fatalf("Could not create cache.  Error is %s", err)
 	}
 
-	manager := nginx.NewManager(cache, nginxDir)
+	manager := nginx.NewManager(cache, nginxDir, timeout)
 
 	//loop forever writing configs
 	for {

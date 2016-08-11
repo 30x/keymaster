@@ -11,8 +11,9 @@ import (
 
 //Manager The config manager
 type Manager struct {
-	bundleCache *client.BundleCache
+	client      *client.ApidClient
 	nginxDir    string
+	pollTimeout int
 
 	//state of last successful deployment
 	lastApidDeployment     *client.Deployment
@@ -25,17 +26,24 @@ type UnzippedDeployment struct {
 }
 
 //NewManager Create a new instance of the configuration manager
-func NewManager(bundleCache *client.BundleCache, nginxDir string) *Manager {
+func NewManager(apiClient *client.ApidClient, nginxDir string, pollTimeout int) *Manager {
 	return &Manager{
-		bundleCache: bundleCache,
+		client:      apiClient,
 		nginxDir:    nginxDir,
+		pollTimeout: pollTimeout,
 	}
 }
 
 //ApplyDeployment Runs once, attempting to apply the latest deployment from the bundle cache. May return an execution error if there is a problem executing
 func (manager *Manager) ApplyDeployment() error {
 
-	deployment, err := manager.bundleCache.GetBundles()
+	etag := ""
+
+	if manager.lastApidDeployment != nil {
+		etag = manager.lastApidDeployment.ETAG
+	}
+
+	deployment, err := manager.client.PollDeployments(etag, manager.pollTimeout)
 
 	if err != nil {
 		return err
@@ -71,7 +79,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = TestConfig(systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, err)
+		manager.deploymentFailed(deployment, []*client.DeploymentBundle{}, err)
 		return err
 	}
 
@@ -81,7 +89,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = Reload(manager.nginxDir, systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, err)
+		manager.deploymentFailed(deployment, []*client.DeploymentBundle{}, err)
 		return err
 	}
 
@@ -107,23 +115,35 @@ func (manager *Manager) ApplyDeployment() error {
 
 }
 
-func (manager *Manager) deploymentFailed(deployment *client.Deployment, err error) {
+func (manager *Manager) deploymentFailed(deployment *client.Deployment, failedBundles []*client.DeploymentBundle, err error) {
 	deploymentResult := &client.DeploymentResult{
 		ID: deployment.ID,
 	}
 
+	status := client.StatusSuccess
+	errorMessage := ""
+
 	if err != nil {
-		deploymentResult.Errors = []*client.DeploymentError{
-			&client.DeploymentError{
-				//todo, how can we tell which bundle failed?
-				BundleID:  "",
-				ErrorCode: "",
-				Reason:    err.Error(),
-			},
-		}
+		errorMessage = err.Error()
+		status = client.StatusFail
 	}
 
-	setErr := manager.bundleCache.Client().SetDeploymentResult(deploymentResult)
+	deploymentResult.Errors = []*client.DeploymentError{}
+
+	for _, failedBundle := range failedBundles {
+		deployError := &client.DeploymentError{
+			//todo, how can we tell which bundle failed?
+			BundleID:  failedBundle.BundleID,
+			ErrorCode: errorMessage,
+			Reason:    errorMessage,
+		}
+
+		deploymentResult.Errors = append(deploymentResult.Errors, deployError)
+	}
+
+	deploymentResult.Status = status
+
+	setErr := manager.client.SetDeploymentResult(deploymentResult)
 
 	if setErr != nil {
 		log.Printf("Error calling apid. Not setting failure %s", setErr)
@@ -136,7 +156,7 @@ func (manager *Manager) deploymentComplete(deployment *client.Deployment, err er
 		ID: deployment.ID,
 	}
 
-	setErr := manager.bundleCache.Client().SetDeploymentResult(deploymentResult)
+	setErr := manager.client.SetDeploymentResult(deploymentResult)
 
 	if setErr != nil {
 		log.Printf("Error calling apid. Not setting success %s", setErr)
