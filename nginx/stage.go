@@ -1,14 +1,25 @@
 package nginx
 
 import (
-	"github.com/30x/keymaster/client"
-	"github.com/30x/keymaster/util"
 	"os"
 	"path"
+
+	"github.com/30x/keymaster/client"
+	"github.com/30x/keymaster/util"
 )
 
+//StageManager the manager for staging a deployment
 type StageManager interface {
 	Stage(deployment *client.Deployment) (deploymentDir string, err *client.DeploymentError)
+}
+
+//StageManagerImpl impl placeholder impelemntation
+type StageManagerImpl struct {
+}
+
+//Stage stage the manager
+func (stageManager *StageManagerImpl) Stage(deployment *client.Deployment) (deploymentDir string, err *client.DeploymentError) {
+	return Stage(deployment)
 }
 
 // Stage unzip, process templates, and validate the deployment.

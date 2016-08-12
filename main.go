@@ -35,13 +35,15 @@ func main() {
 	timeout := v.GetInt(ConfigPollWait)
 	nginxDir := v.GetString(ConfigNginxDir)
 
-	cache, err := client.CreateApidClient(apidURI)
+	client, err := client.CreateApidClient(apidURI)
 
 	if err != nil {
 		log.Fatalf("Could not create cache.  Error is %s", err)
 	}
 
-	manager := nginx.NewManager(cache, nginxDir, timeout)
+	stageManager := new(nginx.StageManagerImpl)
+
+	manager := nginx.NewManager(client, stageManager, nginxDir, timeout)
 
 	//loop forever writing configs
 	for {
