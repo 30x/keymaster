@@ -6,6 +6,7 @@ import (
 	"github.com/30x/keymaster/util"
 	"io/ioutil"
 	"path"
+	"os"
 )
 
 var _ = Describe("Unzip", func() {
@@ -15,6 +16,8 @@ var _ = Describe("Unzip", func() {
 
 		tmpDir, err := ioutil.TempDir("", "TestUnzip")
 		Expect(err).NotTo(HaveOccurred())
+
+		defer os.RemoveAll(tmpDir)
 
 		err = util.Unzip(zipfile, tmpDir)
 		Expect(err).NotTo(HaveOccurred())
