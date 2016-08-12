@@ -1,7 +1,6 @@
 package nginx
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,9 +10,10 @@ import (
 
 //Manager The config manager
 type Manager struct {
-	client      *client.ApidClient
-	nginxDir    string
-	pollTimeout int
+	client       *client.ApidClient
+	nginxDir     string
+	pollTimeout  int
+	stageManager StageManager
 
 	//state of last successful deployment
 	lastApidDeployment     *client.Deployment
@@ -21,11 +21,12 @@ type Manager struct {
 }
 
 //NewManager Create a new instance of the configuration manager
-func NewManager(apiClient *client.ApidClient, nginxDir string, pollTimeout int) *Manager {
+func NewManager(apiClient *client.ApidClient, stageManager StageManager, nginxDir string, pollTimeout int) *Manager {
 	return &Manager{
-		client:      apiClient,
-		nginxDir:    nginxDir,
-		pollTimeout: pollTimeout,
+		client:       apiClient,
+		stageManager: stageManager,
+		nginxDir:     nginxDir,
+		pollTimeout:  pollTimeout,
 	}
 }
 
@@ -54,12 +55,10 @@ func (manager *Manager) ApplyDeployment() error {
 
 	//unzip bundles to bundle id directlry
 
-	unzippedDir, clientErrors := Stage(deployment)
+	unzippedDir, deploymentError := manager.stageManager.Stage(deployment)
 
-	if len(clientErrors) > 0 {
-		err := errors.New("Errors occured when stating bundles")
-
-		manager.deploymentFailed(deployment, clientErrors, err)
+	if deploymentError != nil {
+		manager.deploymentFailed(deployment, deploymentError)
 		return err
 	}
 
@@ -71,7 +70,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = TestConfig(systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, nil, err)
+		manager.deploymentFailed(deployment, nil)
 		return err
 	}
 
@@ -81,7 +80,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = Reload(manager.nginxDir, systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, nil, err)
+		manager.deploymentFailed(deployment, nil)
 		return err
 	}
 
@@ -106,7 +105,7 @@ func (manager *Manager) ApplyDeployment() error {
 
 }
 
-func (manager *Manager) deploymentFailed(deployment *client.Deployment, failedBundles []*client.DeploymentError, err error) {
+func (manager *Manager) deploymentFailed(deployment *client.Deployment, err *client.DeploymentError) {
 	deploymentResult := &client.DeploymentResult{
 		ID:     deployment.ID,
 		Status: client.StatusSuccess,
@@ -114,11 +113,7 @@ func (manager *Manager) deploymentFailed(deployment *client.Deployment, failedBu
 
 	if err != nil {
 
-		deploymentResult.Error = &client.DeploymentError{
-			ErrorCode: 0,
-			Reason:    err.Error(),
-		}
-
+		deploymentResult.Error = err
 		deploymentResult.Status = client.StatusFail
 
 	}

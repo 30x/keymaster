@@ -15,33 +15,32 @@ type ApidClient struct {
 	client       *http.Client
 }
 
-//DeploymentType the type of demployment
-type DeploymentType string
-
 const (
-	//SystemType the type of bundle for a system bundle
-	SystemType = "system"
-
-	//DependentType the type of the bundle when it is a user defined type
-	DependentType = "dependent"
+	//ErrorCodeTODO the placeholder for errors
+	ErrorCodeTODO = 1
 )
 
 //Deployment the type of deployment to return
 type Deployment struct {
 	ETAG    string
 	ID      string              `json:"deploymentId"`
+	System  *SystemBundle       `json:"system"`
 	Bundles []*DeploymentBundle `json:"bundles"`
+}
+
+//SystemBundle the root bundle
+type SystemBundle struct {
+	BundleID string `json:"bundleId"`
+	URL      string `json:"url"`
+
+	//the path on the local system to the file in the url
+	LocalFile string
 }
 
 //DeploymentBundle the bundle to deploy in a response
 type DeploymentBundle struct {
-	BundleID string         `json:"bundleId"`
-	AuthCode string         `json:"authCode"`
-	URL      string         `json:"url"`
-	Type     DeploymentType `json:"type"`
-
-	//the path on the local system to the file in the url
-	LocalFile string
+	*SystemBundle
+	AuthCode string `json:"authCode"`
 }
 
 //DeploymentResult the result of a deployment
@@ -145,10 +144,17 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 
 	//link up the files
 	for _, bundle := range deploymentResponse.Bundles {
-		bundle.LocalFile = strings.Replace(bundle.URL, "file://", "", -1)
+		bundle.LocalFile = cleanFileURL(bundle.URL)
 	}
 
+	deploymentResponse.System.LocalFile = cleanFileURL(deploymentResponse.System.URL)
+
 	return deploymentResponse, nil
+}
+
+//cleanFileUrl removes the file:// prefix from file urls
+func cleanFileURL(inputUrl string) string {
+	return strings.Replace(inputUrl, "file://", "", -1)
 }
 
 //SetDeploymentResult set the result of the deployment.  Returns an error if the call was unsuccessful

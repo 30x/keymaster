@@ -2,6 +2,7 @@ package nginx
 
 import (
 	"io/ioutil"
+
 	"github.com/30x/keymaster/client"
 	"github.com/30x/keymaster/util"
 )
@@ -16,7 +17,7 @@ func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 
 	deploymentDir, err := ioutil.TempDir("deployments", deployment.ID)
 	if err != nil {
-		return "", &client.DeploymentError{ErrorCode: "ERROR", Reason: err.Error()}
+		return "", &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 	}
 
 	deploymentError := processBundles(deploymentDir, deployment)
@@ -38,7 +39,7 @@ func processBundles(deploymentDir string, deployment *client.Deployment) *client
 
 		err = util.Unzip(bundle.LocalFile, bundleDir)
 		if err != nil {
-			return client.DeploymentError{ErrorCode: "ERROR", Reason: err.Error()}
+			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 		}
 
 		templateBundle(bundleDir)

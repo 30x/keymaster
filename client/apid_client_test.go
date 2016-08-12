@@ -49,11 +49,11 @@ var _ = Describe("Bundle Tests", func() {
 
 		timeout := 10
 
-		bundlePairs := []string{"1", "dependent", "2", "dependent", "3", "system", "4", "dependent", "5", "dependent"}
+		bundleIds := []string{"1", "2", "3", "4", "5"}
 
 		deploymentID := "deployment1"
 
-		mockApiServer := createBundles(deploymentID, bundlePairs, timeout)
+		mockApiServer := createBundles(deploymentID, bundleIds, timeout)
 		mockApiServer.Start()
 		defer mockApiServer.Stop()
 
@@ -67,13 +67,11 @@ var _ = Describe("Bundle Tests", func() {
 
 		Expect(err).Should(BeNil())
 
-		Expect(err).Should(BeNil())
-
 		Expect(deployment.ID).Should(Equal(deploymentID))
 
 		bundles := deployment.Bundles
 
-		Expect(len(bundles)).Should(Equal(len(bundlePairs) / 2))
+		Expect(len(bundles)).Should(Equal(len(bundleIds)))
 
 		for index, bundle := range bundles {
 
@@ -95,55 +93,71 @@ var _ = Describe("Bundle Tests", func() {
 
 		}
 
+		Expect(deployment.System).ShouldNot(BeNil())
+
+		Expect(deployment.System.BundleID).Should(Equal("system-revision-1"))
+		Expect(deployment.System.URL).Should(Equal("file:///tmp/keymaster-test/bundles/system-revision-1"))
+		Expect(deployment.System.LocalFile).Should(BeARegularFile())
+
 	})
 
 })
 
-func createBundles(deploymentId string, bundlePairs []string, timeout int) *test.MockApidServer {
+func createBundles(deploymentId string, bundIds []string, timeout int) *test.MockApidServer {
 	//pre allocate
 	bundles := []test.Bundle{}
 
-	Expect(len(bundlePairs)%2).Should(Equal(0), "Pairs must be an even number")
-
-	for i := 0; i < len(bundlePairs); i = i + 2 {
-
-		bundleId := bundlePairs[i]
-		bundleType := bundlePairs[i+1]
+	for _, bundleId := range bundIds {
 
 		url := fmt.Sprintf("file:///tmp/keymaster-test/bundles/%s", bundleId)
 
-		testBundle := test.Bundle{BundleID: bundleId, URL: url, AuthCode: fmt.Sprintf("%d", i), Type: bundleType}
+		testBundle := test.Bundle{}
+		testBundle.BundleID = bundleId
+		testBundle.URL = url
+		testBundle.AuthCode = bundleId
+
 		bundles = append(bundles, testBundle)
 
-		//copy the bundle over
-		src, err := os.Open("../test/testbundle.zip")
-
-		Expect(err).Should(BeNil())
-
-		targetFile := strings.Replace(url, "file://", "", -1)
-
-		targetDir := filepath.Dir(targetFile)
-
-		err = os.MkdirAll(targetDir, 0770)
-
-		Expect(err).Should(BeNil())
-
-		target, err := os.Create(targetFile)
-
-		Expect(err).Should(BeNil())
-
-		_, err = io.Copy(src, target)
-
-		Expect(err).Should(BeNil())
-		src.Close()
-		target.Close()
+		copyBundleFile(url)
 
 	}
 
 	mockApiServer := test.CreateMockApidServer()
 
-	mockApiServer.CreateGetBundles(http.StatusOK, deploymentId, bundles, timeout)
+	systemBundle := test.SystemBundle{
+		BundleID: "system-revision-1",
+		URL:      "file:///tmp/keymaster-test/bundles/system-revision-1",
+	}
+
+	copyBundleFile(systemBundle.URL)
+
+	mockApiServer.CreateGetBundles(http.StatusOK, deploymentId, systemBundle, bundles, timeout)
 
 	return mockApiServer
 
+}
+
+func copyBundleFile(destFileUrl string) {
+	//copy the bundle over
+	src, err := os.Open("../test/testbundle.zip")
+
+	Expect(err).Should(BeNil())
+
+	targetFile := strings.Replace(destFileUrl, "file://", "", -1)
+
+	targetDir := filepath.Dir(targetFile)
+
+	err = os.MkdirAll(targetDir, 0770)
+
+	Expect(err).Should(BeNil())
+
+	target, err := os.Create(targetFile)
+
+	Expect(err).Should(BeNil())
+
+	_, err = io.Copy(src, target)
+
+	Expect(err).Should(BeNil())
+	src.Close()
+	target.Close()
 }

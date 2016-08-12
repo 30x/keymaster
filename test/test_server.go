@@ -17,16 +17,21 @@ type MockApidServer struct {
 
 //GetBundlesResponse the response json to the get bundles
 type GetBundlesResponse struct {
-	DeploymentID string   `json:"deploymentId"`
-	Bundles      []Bundle `json:"bundles"`
+	DeploymentID string       `json:"deploymentId"`
+	System       SystemBundle `json:"system"`
+	Bundles      []Bundle     `json:"bundles"`
 }
 
 //Bundle metadata information
 type Bundle struct {
+	SystemBundle
+	AuthCode string `json:"authCode"`
+}
+
+//SystemBundle the system bundle
+type SystemBundle struct {
 	BundleID string `json:"bundleId"`
 	URL      string `json:"url"`
-	AuthCode string `json:"authCode"`
-	Type     string `json:"type"`
 }
 
 //CreateMockApidServer create a mock apid server
@@ -37,11 +42,12 @@ func CreateMockApidServer() *MockApidServer {
 }
 
 //CreateGetBundles Create a get bundle request that returns the specified http status and body.  Does not make use of the If-Non-Match or block headers.
-func (mockServer *MockApidServer) CreateGetBundles(status int, deploymentID string, bundles []Bundle, timeout int) error {
+func (mockServer *MockApidServer) CreateGetBundles(status int, deploymentID string, system SystemBundle, bundles []Bundle, timeout int) error {
 
 	response := GetBundlesResponse{
 		DeploymentID: deploymentID,
 		Bundles:      bundles,
+		System:       system,
 	}
 
 	data, err := json.Marshal(response)
