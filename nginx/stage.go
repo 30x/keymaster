@@ -15,11 +15,11 @@ func Stage(deployment *client.Deployment) (extractedDirectory string, errors []*
 }
 
 //UnzipBundle  unzip the deployment and return the struct with the info for the directory and bundle
-func UnzipBundle(deployment *client.Deployment) (*UnzippedDeployment, error) {
+func UnzipBundle(deployment *client.Deployment) (string, error) {
 
 	deploymentDir, err := ioutil.TempDir("", "deployment_"+deployment.ID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	for _, bundle := range deployment.Bundles {
@@ -28,13 +28,13 @@ func UnzipBundle(deployment *client.Deployment) (*UnzippedDeployment, error) {
 
 		err = util.Unzip(bundle.LocalFile, bundleDir)
 		if err != nil {
-			return nil, err // todo: specific err identifying bundle
+			return "", err // todo: specific err identifying bundle
 		}
 
 		ValidateBundle(bundleDir) // todo: specific err identifying bundle
 	}
 
-	return &UnzippedDeployment{targetDir: deploymentDir}, nil
+	return deploymentDir, nil
 }
 
 func ValidateBundle(bundleDir string) error {
@@ -50,6 +50,6 @@ func ValidateBundle(bundleDir string) error {
 }
 
 //ProcessTemplates Process the bundle templates.  Return an error if one occurs
-func ProcessTemplates(unzippedDeployment *UnzippedDeployment) error {
+func ProcessTemplates(unzippedDir string) error {
 	return nil
 }

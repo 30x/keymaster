@@ -51,20 +51,20 @@ type DeploymentResult struct {
 	//The status of the deployment
 	Status DeploymentStatus `json:"status"`
 	//Any errors that may have occurred.  If we're successful, this can be nil or empty
-	Error DeploymentError
+	Error *DeploymentError `json:"error"`
 }
 
 //DeploymentError The error that occurred on deployment
 type DeploymentError struct {
-	ErrorCode string `json:"errorCode"`
-	Reason    string `json:"reason"`
-	bundleErrors []BundleError
+	ErrorCode    int           `json:"errorCode"`
+	Reason       string        `json:"reason"`
+	BundleErrors []BundleError `json:"bundleErrors"`
 }
 
 //BundleError Any Bundle-specific error that occurred on deployment
 type BundleError struct {
-	BundleID string `json:"bundleId"`
-	ErrorCode string `json:"errorCode"`
+	BundleID  string `json:"bundleId"`
+	ErrorCode int    `json:"errorCode"`
 	Reason    string `json:"reason"`
 }
 

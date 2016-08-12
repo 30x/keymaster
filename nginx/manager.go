@@ -1,6 +1,7 @@
 package nginx
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -53,7 +54,14 @@ func (manager *Manager) ApplyDeployment() error {
 
 	//unzip bundles to bundle id directlry
 
-	unzippedDir, errors := Stage(deployment)
+	unzippedDir, clientErrors := Stage(deployment)
+
+	if len(clientErrors) > 0 {
+		err := errors.New("Errors occured when stating bundles")
+
+		manager.deploymentFailed(deployment, clientErrors, err)
+		return err
+	}
 
 	//perform template processing
 
@@ -63,7 +71,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = TestConfig(systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, nil)
+		manager.deploymentFailed(deployment, nil, err)
 		return err
 	}
 
@@ -73,7 +81,7 @@ func (manager *Manager) ApplyDeployment() error {
 	err = Reload(manager.nginxDir, systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, nil)
+		manager.deploymentFailed(deployment, nil, err)
 		return err
 	}
 
@@ -85,7 +93,6 @@ func (manager *Manager) ApplyDeployment() error {
 	manager.lastUnzippedDeployment = unzippedDir
 
 	//cleanup old last from file system
-
 	err = os.RemoveAll(previousUnzipped)
 
 	//swallow this error, it shouldn't blow up our process
@@ -99,16 +106,22 @@ func (manager *Manager) ApplyDeployment() error {
 
 }
 
-func (manager *Manager) deploymentFailed(deployment *client.Deployment, failedBundles []*client.DeploymentError) {
+func (manager *Manager) deploymentFailed(deployment *client.Deployment, failedBundles []*client.DeploymentError, err error) {
 	deploymentResult := &client.DeploymentResult{
-		ID: deployment.ID,
+		ID:     deployment.ID,
+		Status: client.StatusSuccess,
 	}
 
-	status := client.StatusSuccess
+	if err != nil {
 
-	deploymentResult.Errors = failedBundles
+		deploymentResult.Error = &client.DeploymentError{
+			ErrorCode: 0,
+			Reason:    err.Error(),
+		}
 
-	deploymentResult.Status = status
+		deploymentResult.Status = client.StatusFail
+
+	}
 
 	setErr := manager.client.SetDeploymentResult(deploymentResult)
 
