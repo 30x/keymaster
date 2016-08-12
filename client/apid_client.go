@@ -32,19 +32,17 @@ type Deployment struct {
 type SystemBundle struct {
 	BundleID string `json:"bundleId"`
 	URL      string `json:"url"`
+}
 
-	//the path on the local system to the file in the url
-	LocalFile string
+//FilePath parse the file path in teh bundle
+func (bundle *SystemBundle) FilePath() string {
+	return strings.Replace(bundle.URL, "file://", "", -1)
 }
 
 //DeploymentBundle the bundle to deploy in a response
 type DeploymentBundle struct {
-	BundleID string         `json:"bundleId"`
-	AuthCode string         `json:"authCode"`
-	URL      string         `json:"url"`
-
-	//the path on the local system to the file in the url
-	LocalFile string
+	SystemBundle
+	AuthCode string `json:"authCode"`
 }
 
 //DeploymentResult the result of a deployment
@@ -146,19 +144,7 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 		return nil, err
 	}
 
-	//link up the files
-	for _, bundle := range deploymentResponse.Bundles {
-		bundle.LocalFile = cleanFileURL(bundle.URL)
-	}
-
-	deploymentResponse.System.LocalFile = cleanFileURL(deploymentResponse.System.URL)
-
 	return deploymentResponse, nil
-}
-
-//cleanFileUrl removes the file:// prefix from file urls
-func cleanFileURL(inputUrl string) string {
-	return strings.Replace(inputUrl, "file://", "", -1)
 }
 
 //SetDeploymentResult set the result of the deployment.  Returns an error if the call was unsuccessful

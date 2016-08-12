@@ -86,10 +86,10 @@ var _ = Describe("Bundle Tests", func() {
 
 			Expect(bundle.URL).Should(Equal(expected))
 
-			Expect(bundle.LocalFile).Should(BeARegularFile())
+			Expect(bundle.FilePath()).Should(BeARegularFile())
 
 			expectedName := fmt.Sprintf("/tmp/keymaster-test/bundles/%s", bundleID)
-			Expect(bundle.LocalFile).Should(Equal(expectedName))
+			Expect(bundle.FilePath()).Should(Equal(expectedName))
 
 		}
 
@@ -97,7 +97,7 @@ var _ = Describe("Bundle Tests", func() {
 
 		Expect(deployment.System.BundleID).Should(Equal("system-revision-1"))
 		Expect(deployment.System.URL).Should(Equal("file:///tmp/keymaster-test/bundles/system-revision-1"))
-		Expect(deployment.System.LocalFile).Should(BeARegularFile())
+		Expect(deployment.System.FilePath()).Should(BeARegularFile())
 
 	})
 
