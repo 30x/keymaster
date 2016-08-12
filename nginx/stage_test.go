@@ -17,13 +17,13 @@ var _ = Describe("stage", func() {
 
 			systemBundle := &client.SystemBundle{
 				BundleID: "bundle1",
-				LocalFile: "../test/testsystem.zip",
+				URL: "file://../test/testsystem.zip",
 			}
 
 			bundles := make([]*client.DeploymentBundle, 1)
 			bundles[0] = &client.DeploymentBundle{
 				BundleID: "bundle1",
-				LocalFile: "../test/testbundle.zip",
+				URL: "file://../test/testbundle.zip",
 			}
 
 			deployment := &client.Deployment{
@@ -38,8 +38,8 @@ var _ = Describe("stage", func() {
 
 			defer os.RemoveAll(stageDir)
 
-			//nginxConf:= path.Join(stageDir, "nginx.conf")
-			//Expect(nginxConf).Should(BeAnExistingFile())
+			nginxConf:= path.Join(stageDir, "nginx.conf")
+			Expect(nginxConf).Should(BeAnExistingFile())
 
 			bundleDir := path.Join(stageDir, bundles[0].BundleID)
 

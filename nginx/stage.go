@@ -20,7 +20,12 @@ func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 		return "", &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 	}
 
-	deploymentError := processBundles(deploymentDir, deployment)
+	deploymentError := processSystemBundle(deploymentDir, deployment)
+	if err != nil {
+		return "", deploymentError
+	}
+
+	deploymentError = processDeploymentBundles(deploymentDir, deployment)
 	if err != nil {
 		return "", deploymentError
 	}
@@ -30,9 +35,23 @@ func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 	return deploymentDir, deploymentError
 }
 
+// todo: may want to reconsider putting system at top level - possible name conflicts w/ deployment bundles?
+func processSystemBundle(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
+
+	err := util.Unzip(deployment.System.FilePath(), deploymentDir)
+	if err != nil {
+		return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
+	}
+
+	// todo: run templating
+
+	// todo: run validation
+
+	return nil
+}
 
 // unzipBundles unzip the deployment and return the directory
-func processBundles(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
+func processDeploymentBundles(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
 
 	for _, bundle := range deployment.Bundles {
 
@@ -42,20 +61,16 @@ func processBundles(deploymentDir string, deployment *client.Deployment) *client
 			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 		}
 
-		err = util.Unzip(bundle.LocalFile, bundleDir)
+		err = util.Unzip(bundle.FilePath(), bundleDir)
 		if err != nil {
 			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 		}
 
-		templateBundle(bundleDir)
+		// todo: run templating
 
-		//ValidateBundle(bundleDir) // todo
+		// todo: run validation
 	}
 
-	return nil
-}
-
-func templateBundle(bundleDir string) *client.DeploymentError {
 	return nil
 }
 
