@@ -2,54 +2,65 @@ package nginx
 
 import (
 	"io/ioutil"
-	"os"
-	"path"
-
 	"github.com/30x/keymaster/client"
 	"github.com/30x/keymaster/util"
 )
 
-//Stage unzip, process templates, and validate the deployment
-func Stage(deployment *client.Deployment) (extractedDirectory string, errors []*client.DeploymentError) {
-	return "", nil
+type StageManager interface {
+	Stage(deployment *client.Deployment) (deploymentDir string, err *client.DeploymentError)
 }
 
-//UnzipBundle  unzip the deployment and return the struct with the info for the directory and bundle
-func UnzipBundle(deployment *client.Deployment) (string, error) {
+// Stage unzip, process templates, and validate the deployment.
+// returns directory, DeploymentError
+func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 
-	deploymentDir, err := ioutil.TempDir("", "deployment_"+deployment.ID)
+	deploymentDir, err := ioutil.TempDir("deployments", deployment.ID)
 	if err != nil {
-		return "", err
+		return "", &client.DeploymentError{ErrorCode: "ERROR", Reason: err.Error()}
 	}
+
+	deploymentError := processBundles(deploymentDir, deployment)
+	if err != nil {
+		return "", deploymentError
+	}
+
+	deploymentError = validateDeployment(deploymentDir, deployment)
+
+	return deploymentDir, deploymentError
+}
+
+// unzipBundles unzip the deployment and return the directory
+func processBundles(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
 
 	for _, bundle := range deployment.Bundles {
 
-		bundleDir, err := ioutil.TempDir(deploymentDir, "bundle_"+bundle.BundleID)
+		bundleDir, err := ioutil.TempDir(deploymentDir, bundle.BundleID)
 
 		err = util.Unzip(bundle.LocalFile, bundleDir)
 		if err != nil {
-			return "", err // todo: specific err identifying bundle
+			return client.DeploymentError{ErrorCode: "ERROR", Reason: err.Error()}
 		}
 
-		ValidateBundle(bundleDir) // todo: specific err identifying bundle
+		templateBundle(bundleDir)
+
+		//ValidateBundle(bundleDir) // todo
 	}
 
-	return deploymentDir, nil
-}
-
-func ValidateBundle(bundleDir string) error {
-
-	bundleConfFile := path.Join(bundleDir, "bundle.conf")
-	_, err := os.Stat(bundleConfFile)
-	if err != nil {
-		return err
-	}
-
-	// todo: validate pipes
 	return nil
 }
 
-//ProcessTemplates Process the bundle templates.  Return an error if one occurs
-func ProcessTemplates(unzippedDir string) error {
+func templateBundle(bundleDir string) *client.DeploymentError {
+	return nil
+}
+
+func validateDeployment(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
+
+	//bundleConfFile := path.Join(deploymentDir, "bundle.conf")
+	//_, err := os.Stat(bundleConfFile)
+	//if err != nil {
+	//	return err
+	//}
+
+	// todo: validate pipes
 	return nil
 }
