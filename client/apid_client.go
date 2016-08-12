@@ -39,8 +39,12 @@ type SystemBundle struct {
 
 //DeploymentBundle the bundle to deploy in a response
 type DeploymentBundle struct {
-	*SystemBundle
-	AuthCode string `json:"authCode"`
+	BundleID string         `json:"bundleId"`
+	AuthCode string         `json:"authCode"`
+	URL      string         `json:"url"`
+
+	//the path on the local system to the file in the url
+	LocalFile string
 }
 
 //DeploymentResult the result of a deployment

@@ -1,10 +1,10 @@
 package nginx
 
 import (
-	"io/ioutil"
-
 	"github.com/30x/keymaster/client"
 	"github.com/30x/keymaster/util"
+	"os"
+	"path"
 )
 
 type StageManager interface {
@@ -15,7 +15,7 @@ type StageManager interface {
 // returns directory, DeploymentError
 func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 
-	deploymentDir, err := ioutil.TempDir("deployments", deployment.ID)
+	deploymentDir, err := util.MkTempDir("", deployment.ID, 0755)
 	if err != nil {
 		return "", &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 	}
@@ -30,12 +30,17 @@ func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 	return deploymentDir, deploymentError
 }
 
+
 // unzipBundles unzip the deployment and return the directory
 func processBundles(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
 
 	for _, bundle := range deployment.Bundles {
 
-		bundleDir, err := ioutil.TempDir(deploymentDir, bundle.BundleID)
+		bundleDir := path.Join(deploymentDir, bundle.BundleID)
+		err := os.Mkdir(bundleDir, 0755)
+		if err != nil {
+			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
+		}
 
 		err = util.Unzip(bundle.LocalFile, bundleDir)
 		if err != nil {
