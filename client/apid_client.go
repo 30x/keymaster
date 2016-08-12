@@ -36,13 +36,24 @@ type SystemBundle struct {
 
 //FilePath parse the file path in teh bundle
 func (bundle *SystemBundle) FilePath() string {
-	return strings.Replace(bundle.URL, "file://", "", -1)
+	return cleanFileURL(bundle.URL)
 }
 
 //DeploymentBundle the bundle to deploy in a response
 type DeploymentBundle struct {
-	SystemBundle
+	BundleID string `json:"bundleId"`
 	AuthCode string `json:"authCode"`
+	URL      string `json:"url"`
+}
+
+//FilePath parse the file path in teh bundle
+func (bundle *DeploymentBundle) FilePath() string {
+	return cleanFileURL(bundle.URL)
+}
+
+//cleanFileURL
+func cleanFileURL(url string) string {
+	return strings.Replace(url, "file://", "", -1)
 }
 
 //DeploymentResult the result of a deployment
