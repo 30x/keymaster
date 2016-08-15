@@ -9,8 +9,17 @@ import (
 	"strings"
 )
 
-//ApidClient the client factory.  Use the CreateApidClient function to perform validation.
-type ApidClient struct {
+//ApidClient the apidClient
+type ApidClient interface {
+	//PollDeployments poll the deployments and return the deployment
+	PollDeployments(etag string, timeout int) (*Deployment, error)
+
+	//SetDeploymentResult set the deployment result
+	SetDeploymentResult(result *DeploymentResult) error
+}
+
+//ApidClientImpl the client impl.  Use the CreateApidClient function to perform validation.
+type ApidClientImpl struct {
 	apidHostPath string
 	client       *http.Client
 }
@@ -91,10 +100,10 @@ const (
 )
 
 //CreateApidClient create the client and validate the input
-func CreateApidClient(apidHostPath string) (*ApidClient, error) {
+func CreateApidClient(apidHostPath string) (ApidClient, error) {
 
 	//return the apid client
-	return &ApidClient{
+	return &ApidClientImpl{
 		apidHostPath: apidHostPath,
 		client:       &http.Client{},
 	}, nil
@@ -102,7 +111,7 @@ func CreateApidClient(apidHostPath string) (*ApidClient, error) {
 
 //PollDeployments poll the deployments fromthe apidHostPath with the etag (optional) and timeout (0 for none)
 //returns the deployment response, or an error if one occurs.  A nil deploymentresponse indicates a timeout on polling (TODO, should this be a custom error?)
-func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deployment, error) {
+func (apidClient *ApidClientImpl) PollDeployments(etag string, timeout int) (*Deployment, error) {
 
 	url := apidClient.apidHostPath + "/deployments/current"
 	req, err := http.NewRequest("GET", url, nil)
@@ -159,7 +168,7 @@ func (apidClient *ApidClient) PollDeployments(etag string, timeout int) (*Deploy
 }
 
 //SetDeploymentResult set the result of the deployment.  Returns an error if the call was unsuccessful
-func (apidClient *ApidClient) SetDeploymentResult(result *DeploymentResult) error {
+func (apidClient *ApidClientImpl) SetDeploymentResult(result *DeploymentResult) error {
 
 	url := fmt.Sprintf("%s/deployments/%s", apidClient.apidHostPath, result.ID)
 

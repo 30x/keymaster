@@ -10,7 +10,7 @@ import (
 
 //Manager The config manager
 type Manager struct {
-	client       *client.ApidClient
+	client       client.ApidClient
 	nginxDir     string
 	pollTimeout  int
 	stageManager StageManager
@@ -21,7 +21,7 @@ type Manager struct {
 }
 
 //NewManager Create a new instance of the configuration manager
-func NewManager(apiClient *client.ApidClient, stageManager StageManager, nginxDir string, pollTimeout int) *Manager {
+func NewManager(apiClient client.ApidClient, stageManager StageManager, nginxDir string, pollTimeout int) *Manager {
 	return &Manager{
 		client:       apiClient,
 		stageManager: stageManager,
