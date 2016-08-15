@@ -3,3 +3,4 @@ cover.html
 coverage.txt
 launch.json
 *.test
+error.log
