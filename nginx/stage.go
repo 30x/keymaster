@@ -24,6 +24,7 @@ func (stageManager *StageManagerImpl) Stage(deployment *client.Deployment) (depl
 
 // Stage unzip, process templates, and validate the deployment.
 // returns directory, DeploymentError
+// if directory returned is not empty (may be non-empty even if error), client is responsible for cleanup
 func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 
 	deploymentDir, err := util.MkTempDir("", deployment.ID, 0755)
@@ -31,38 +32,44 @@ func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 		return "", &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 	}
 
-	deploymentError := processSystemBundle(deploymentDir, deployment)
-	if err != nil {
-		return "", deploymentError
+	deploymentError := unzipSystem(deploymentDir, deployment)
+	if deploymentError != nil {
+		return deploymentDir, deploymentError
 	}
 
-	deploymentError = processDeploymentBundles(deploymentDir, deployment)
-	if err != nil {
-		return "", deploymentError
+	deploymentError = unzipDeploymentBundles(deploymentDir, deployment)
+	if deploymentError != nil {
+		return deploymentDir, deploymentError
 	}
 
-	deploymentError = validateDeployment(deploymentDir, deployment)
+	// todo
+	//deploymentError = Template(deploymentDir)
+	//if deploymentError != nil {
+	//	return deploymentDir, deploymentError
+	//}
+
+	// todo
+	//deploymentError = ValidateDeployment(deploymentDir, deployment)
+	//if deploymentError != nil {
+	//	return deploymentDir, deploymentError
+	//}
 
 	return deploymentDir, deploymentError
 }
 
 // todo: may want to reconsider putting system at top level - possible name conflicts w/ deployment bundles?
-func processSystemBundle(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
+func unzipSystem(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
 
 	err := util.Unzip(deployment.System.FilePath(), deploymentDir)
 	if err != nil {
 		return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 	}
 
-	// todo: run templating
-
-	// todo: run validation
-
 	return nil
 }
 
 // unzipBundles unzip the deployment and return the directory
-func processDeploymentBundles(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
+func unzipDeploymentBundles(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
 
 	for _, bundle := range deployment.Bundles {
 
@@ -76,23 +83,7 @@ func processDeploymentBundles(deploymentDir string, deployment *client.Deploymen
 		if err != nil {
 			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 		}
-
-		// todo: run templating
-
-		// todo: run validation
 	}
 
-	return nil
-}
-
-func validateDeployment(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
-
-	//bundleConfFile := path.Join(deploymentDir, "bundle.conf")
-	//_, err := os.Stat(bundleConfFile)
-	//if err != nil {
-	//	return err
-	//}
-
-	// todo: validate pipes
 	return nil
 }

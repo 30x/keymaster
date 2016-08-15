@@ -33,10 +33,11 @@ var _ = Describe("stage", func() {
 			}
 
 			stageDir, err := nginx.Stage(deployment)
+			if stageDir != "" {
+				defer os.RemoveAll(stageDir)
+			}
 			Expect(err).To(BeNil())
 			Expect(stageDir).Should(BeAnExistingFile())
-
-			defer os.RemoveAll(stageDir)
 
 			nginxConf:= path.Join(stageDir, "nginx.conf")
 			Expect(nginxConf).Should(BeAnExistingFile())
