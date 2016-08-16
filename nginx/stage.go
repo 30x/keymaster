@@ -42,11 +42,10 @@ func Stage(deployment *client.Deployment) (string, *client.DeploymentError) {
 		return deploymentDir, deploymentError
 	}
 
-	// todo
-	//deploymentError = Template(deploymentDir)
-	//if deploymentError != nil {
-	//	return deploymentDir, deploymentError
-	//}
+	deploymentError = Template(deploymentDir, deployment)
+	if deploymentError != nil {
+		return deploymentDir, deploymentError
+	}
 
 	// todo
 	//deploymentError = ValidateDeployment(deploymentDir, deployment)
