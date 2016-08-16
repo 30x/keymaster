@@ -11,7 +11,7 @@ import (
 //Manager The config manager
 type Manager struct {
 	client       client.ApidClient
-	nginxDir     string
+	nginxWorkDir string
 	pollTimeout  int
 	stageManager StageManager
 
@@ -25,7 +25,7 @@ func NewManager(apiClient client.ApidClient, stageManager StageManager, nginxDir
 	return &Manager{
 		client:       apiClient,
 		stageManager: stageManager,
-		nginxDir:     nginxDir,
+		nginxWorkDir: nginxDir,
 		pollTimeout:  pollTimeout,
 	}
 }
@@ -67,20 +67,31 @@ func (manager *Manager) ApplyDeployment() error {
 	//test nginx with the processed templates/new configs.  TODO warnings constitute a failure
 
 	systemFile := fmt.Sprintf("%s/%s", unzippedDir, "nginx.conf")
-	err = TestConfig(systemFile)
+	err = TestConfig(manager.nginxWorkDir, systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, nil)
+		deploymentError = &client.DeploymentError{
+			ErrorCode: client.ErrorCodeTODO,
+			Reason:    err.Error(),
+		}
+
+		manager.deploymentFailed(deployment, deploymentError)
 		return err
 	}
 
 	//reload or start nginx if not running
 	//TODO detect start state from PID
 
-	err = Reload(manager.nginxDir, systemFile)
+	err = Reload(manager.nginxWorkDir, systemFile)
 
 	if err != nil {
-		manager.deploymentFailed(deployment, nil)
+		deploymentError = &client.DeploymentError{
+			ErrorCode: client.ErrorCodeTODO,
+			Reason:    err.Error(),
+		}
+
+		manager.deploymentFailed(deployment, deploymentError)
+
 		return err
 	}
 

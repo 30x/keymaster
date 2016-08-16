@@ -1,38 +1,32 @@
 package nginx_test
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	"github.com/30x/keymaster/client"
 	"github.com/30x/keymaster/nginx"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-const nginxDir = ""
+const nginxDir = "/tmp/nginx_test"
 const basePath = "/Users/apigee/develop/go/src/github.com/30x/keymaster"
 
 var _ = Describe("Manager", func() {
 
-	FIt("Valid Configuration", func() {
+	//tests a valid configuration on the first pass works
+	It("Valid Configuration Single Pass", func() {
+
+		os.MkdirAll(nginxDir, 0777)
 
 		stager := &stageTester{
 			testConfigDir: basePath + "/test/testbundles/validBundle",
 		}
 
-		// systemBundle := &client.SystemBundle{
-		// 	BundleID: "bundle1",
-		// 	URL:      "file://../test/testsystem.zip",
-		// }
-
-		// bundles := make([]*client.DeploymentBundle, 1)
-		// bundles[0] = &client.DeploymentBundle{
-		// 	BundleID: "bundle1",
-		// 	URL:      "file://../test/testbundle.zip",
-		// }
-
 		deployment := &client.Deployment{
 			ID: "deployment_id",
-			// System:  systemBundle,
-			// Bundles: bundles,
 		}
 
 		//wire up the resposne
@@ -50,6 +44,116 @@ var _ = Describe("Manager", func() {
 		//validate we returned successfully
 
 		Expect(apiClient.deploymentResult.Status).Should(Equal(client.StatusSuccess))
+		Expect(apiClient.deploymentResult.ID).Should(Equal(deployment.ID))
+
+	})
+
+	//tests a valid configuration on the first pass works
+	It("Valid Configuration Multiple Pass", func() {
+
+		os.MkdirAll(nginxDir, 0777)
+
+		for i := 0; i < 5; i++ {
+
+			stager := &stageTester{
+				testConfigDir: basePath + "/test/testbundles/validBundle",
+			}
+
+			//create a new deployment id each pass
+			deploymentId := fmt.Sprintf("deployment_id_%d", i)
+			deployment := &client.Deployment{
+				ID: deploymentId,
+			}
+
+			//wire up the resposne
+			apiClient := &apiClientTester{
+				mockDeployment: deployment,
+			}
+
+			manager := nginx.NewManager(apiClient, stager, nginxDir, 1)
+
+			err := manager.ApplyDeployment()
+
+			//no error with valid bundle
+			Expect(err).Should(BeNil())
+
+			//validate we returned successfully
+
+			Expect(apiClient.deploymentResult.Status).Should(Equal(client.StatusSuccess))
+			Expect(apiClient.deploymentResult.ID).Should(Equal(deploymentId))
+		}
+
+	})
+
+	//TODO, test success, fail, success
+
+	It("Single Conflict Configuration", func() {
+
+		os.MkdirAll(nginxDir, 0777)
+
+		stager := &stageTester{
+			testConfigDir: basePath + "/test/testbundles/singleConflictPathBundle",
+		}
+
+		deployment := &client.Deployment{
+			ID: "deployment_id",
+		}
+
+		//wire up the resposne
+		apiClient := &apiClientTester{
+			mockDeployment: deployment,
+		}
+
+		manager := nginx.NewManager(apiClient, stager, nginxDir, 1)
+
+		err := manager.ApplyDeployment()
+
+		//no error with valid bundle
+		Expect(err).ShouldNot(BeNil())
+
+		//check the error is applicable
+		expectedErrorMessage := "[warn] conflicting server name \"localhost\" on 0.0.0.0:9000"
+		containsMessage := strings.Contains(err.Error(), expectedErrorMessage)
+		Expect(containsMessage).Should(BeTrue(), fmt.Sprintf("Should contain error message %s. Error message was %s", expectedErrorMessage, err))
+		//validate we returned successfully
+
+		Expect(apiClient.deploymentResult.Status).Should(Equal(client.StatusFail))
+		Expect(apiClient.deploymentResult.ID).Should(Equal(deployment.ID))
+
+	})
+
+	//TODO, this isn't returning the error message, only an error code
+	It("Multiple invalid files", func() {
+
+		os.MkdirAll(nginxDir, 0777)
+
+		stager := &stageTester{
+			testConfigDir: basePath + "/test/testbundles/multipleInvalidBundle",
+		}
+
+		deployment := &client.Deployment{
+			ID: "deployment_id",
+		}
+
+		//wire up the resposne
+		apiClient := &apiClientTester{
+			mockDeployment: deployment,
+		}
+
+		manager := nginx.NewManager(apiClient, stager, nginxDir, 1)
+
+		err := manager.ApplyDeployment()
+
+		//no error with valid bundle
+		Expect(err).Should(BeNil())
+
+		//check the error is applicable
+		expectedErrorMessage := "[emerg] directive \"listen\" is not terminated by \";\""
+		containsMessage := strings.Contains(err.Error(), expectedErrorMessage)
+		Expect(containsMessage).Should(BeTrue(), fmt.Sprintf("Should contain error message %s. Error message was %s", expectedErrorMessage, err))
+		//validate we returned successfully
+
+		Expect(apiClient.deploymentResult.Status).Should(Equal(client.StatusFail))
 		Expect(apiClient.deploymentResult.ID).Should(Equal(deployment.ID))
 
 	})

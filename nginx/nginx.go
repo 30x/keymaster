@@ -1,14 +1,17 @@
 package nginx
 
 import (
-	"os/exec"
-	"path/filepath"
-	"regexp"
 	"fmt"
+	"log"
+	"os/exec"
+	"regexp"
 )
 
-func TestConfig(configFile string) error {
-	cmd := exec.Command("nginx", "-t", "-p", filepath.Dir(configFile), "-c", configFile)
+//TestConfig Test the configuration of the nginx file.  Will return an error if an error or warning is detected
+func TestConfig(prefixPath, configFile string) error {
+	cmd := exec.Command("nginx", "-t", "-p", prefixPath, "-c", configFile)
+
+	log.Printf("About to execute command %+v", cmd)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -29,7 +32,7 @@ func TestConfig(configFile string) error {
 }
 
 func findError(errType string, message []byte) error {
-	matched, err := regexp.Match("^nginx: \\[" + errType + "\\]", message)
+	matched, err := regexp.Match("^nginx: \\["+errType+"\\]", message)
 	if err != nil {
 		return err
 	}

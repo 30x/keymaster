@@ -1,14 +1,15 @@
 package nginx_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/30x/keymaster/nginx"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
-	"net/http"
 	"time"
+
+	"github.com/30x/keymaster/nginx"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("nginx", func() {
@@ -20,7 +21,7 @@ var _ = Describe("nginx", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer os.RemoveAll(path.Dir(tmpfile.Name()))
 
-			err = nginx.TestConfig(tmpfile.Name())
+			err = nginx.TestConfig("/tmp/nginxtest", tmpfile.Name())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -29,7 +30,7 @@ var _ = Describe("nginx", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer os.RemoveAll(path.Dir(tmpfile.Name()))
 
-			err = nginx.TestConfig(tmpfile.Name())
+			err = nginx.TestConfig("/tmp/nginxtest", tmpfile.Name())
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -38,7 +39,7 @@ var _ = Describe("nginx", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer os.RemoveAll(path.Dir(tmpfile.Name()))
 
-			err = nginx.TestConfig(tmpfile.Name())
+			err = nginx.TestConfig("/tmp/nginxtest", tmpfile.Name())
 			Expect(err).To(HaveOccurred())
 		})
 	})
