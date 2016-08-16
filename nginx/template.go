@@ -17,10 +17,11 @@ func Template(deploymentDir string, deployment *client.Deployment) *client.Deplo
 	pipesFileMap := make(map[string]string) // fq pipe name -> pipe file path
 	bundleConfMap := make(map[*client.DeploymentBundle]string) // bundle -> bundle.conf path
 
-	for _, b := range deployment.Bundles {
+	for i, b := range deployment.Bundles {
 		bundlePath := path.Join(deploymentDir, b.BundleID)
 		bundleConf := path.Join(bundlePath, "bundle.conf")
-		bundleConfMap[b] = bundleConf
+		bundle := b
+		bundleConfMap[bundle] = bundleConf
 
 		pipesDir := path.Join(bundlePath, "pipes")
 		fis, err := ioutil.ReadDir(pipesDir)
