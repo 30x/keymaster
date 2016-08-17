@@ -9,12 +9,11 @@ import (
 	"os"
 	"io"
 	"github.com/30x/keymaster/util"
-	"log"
 )
 
 var _ = Describe("templating", func() {
 
-	FIt("should create a valid deployment", func() {
+	It("should create a valid deployment", func() {
 
 		systemBundle := &client.SystemBundle{
 			BundleID: "bundle1",
