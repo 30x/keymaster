@@ -1,0 +1,8 @@
+request:
+  - dump:
+      dumpBody: true
+  - verifyAPIKey:
+      keyHeader: X-Apigee-API-Key
+response:
+  - dump:
+      dumpBody: false

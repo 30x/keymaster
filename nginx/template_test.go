@@ -1,35 +1,41 @@
 package nginx_test
 
 import (
-	"io"
-	"os"
-	"path"
-
-	"github.com/30x/keymaster/client"
-	"github.com/30x/keymaster/nginx"
-	"github.com/30x/keymaster/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/30x/keymaster/nginx"
+	"path"
+	"github.com/30x/keymaster/client"
+	"os"
+	"io"
+	"github.com/30x/keymaster/util"
+	"log"
 )
 
 var _ = Describe("templating", func() {
 
-	It("should create a valid deployment", func() {
+	FIt("should create a valid deployment", func() {
 
 		systemBundle := &client.SystemBundle{
 			BundleID: "bundle1",
-			URL:      "file://../test/testsystem.zip",
+			URL: "file://../test/testsystem.zip",
 		}
 
-		bundles := make([]*client.DeploymentBundle, 1)
-		bundles[0] = &client.DeploymentBundle{
+		var bundles []*client.DeploymentBundle
+
+		bundles = append(bundles, &client.DeploymentBundle{
 			BundleID: "bundle1",
-			URL:      "file://../test/testbundle.zip",
-		}
+			URL: "file://../test/testbundle.zip",
+		})
+
+		bundles = append(bundles, &client.DeploymentBundle{
+			BundleID: "bundle2",
+			URL: "file://../test/testbundle.zip",
+		})
 
 		deployment := &client.Deployment{
-			ID:      "deployment_id",
-			System:  systemBundle,
+			ID: "deployment_id",
+			System: systemBundle,
 			Bundles: bundles,
 		}
 
@@ -37,30 +43,22 @@ var _ = Describe("templating", func() {
 		Expect(err).NotTo(HaveOccurred())
 		defer os.RemoveAll(stageDir)
 
-		copyDirRecursive("../test/template/testsystem", stageDir)
+		err = copyDirRecursive("../test/template/testsystem", stageDir)
+		Expect(err).NotTo(HaveOccurred())
 
 		nginxConf := path.Join(stageDir, "nginx.conf")
 		Expect(nginxConf).Should(BeAnExistingFile())
 
-		bundleDir := path.Join(stageDir, bundles[0].BundleID)
-		copyDirRecursive("../test/template/testbundle", bundleDir)
-
-		Expect(bundleDir).Should(BeAnExistingFile())
-
-		nginxBundle := path.Join(bundleDir, "bundle.conf")
-		Expect(nginxBundle).Should(BeAnExistingFile())
-
-		pipeFile := path.Join(bundleDir, "pipes", "apikey.yaml")
-		Expect(pipeFile).Should(BeAnExistingFile())
-
-		pipeFile = path.Join(bundleDir, "pipes", "dump.yaml")
-		Expect(pipeFile).Should(BeAnExistingFile())
+		for _, b := range bundles {
+			bundleDir := path.Join(stageDir, b.BundleID)
+			err = copyDirRecursive("../test/template/testbundle", bundleDir)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		deploymentErr := nginx.Template(stageDir, deployment)
 		Expect(deploymentErr).To(BeNil())
 
-		os.MkdirAll("/tmp/nginx_test", 0777)
-		err = nginx.TestConfig("/tmp/nginx_test", nginxConf)
+		err = nginx.TestConfig(stageDir, "nginx.conf")
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

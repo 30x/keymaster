@@ -1,0 +1,6 @@
+request:
+  - dump:
+      dumpBody: true
+response:
+  - dump:
+      dumpBody: false
