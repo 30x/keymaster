@@ -2,9 +2,13 @@ package nginx
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
+	"syscall"
 )
 
 //TestConfig Test the configuration of the nginx file.  Will return an error if an error or warning is detected
@@ -13,12 +17,9 @@ func TestConfig(prefixPath, configFile string) error {
 
 	log.Printf("About to execute command %+v", cmd)
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return err
-	}
+	out, execErr := cmd.CombinedOutput()
 
-	err = findError("emerg", out)
+	err := findError("emerg", out)
 	if err != nil {
 		return err
 	}
@@ -26,6 +27,11 @@ func TestConfig(prefixPath, configFile string) error {
 	err = findError("warn", out)
 	if err != nil {
 		return err
+	}
+
+	//defer checking the execErr until the end.  Otherwise we won't receive emerg errors
+	if execErr != nil {
+		return execErr
 	}
 
 	return nil
@@ -64,4 +70,54 @@ func Reload(prefixPath, configFilePath string) error {
 		return fmt.Errorf(string(out))
 	}
 	return nil
+}
+
+//IsRunning return true if nginx is running, false otherwise.  A missing pid file is not considered an error
+func IsRunning(pidFile string) (bool, error) {
+	_, err := os.Stat(pidFile)
+
+	if err != nil {
+		//if it's a not exist error, we swallow it, since it won't be running
+		if err != os.ErrNotExist {
+			return false, err
+		}
+
+		return false, nil
+	}
+
+	fileData, err := ioutil.ReadFile(pidFile)
+
+	if err != nil {
+		return false, err
+	}
+
+	//nothing in the file, it's not running
+	fileString := string(fileData)
+
+	if len(fileString) == 0 {
+		return false, nil
+	}
+
+	pid, err := strconv.Atoi(string(fileData))
+
+	if err != nil {
+		return false, err
+	}
+
+	process, err := os.FindProcess(pid)
+
+	if err != nil {
+		return false, err
+	}
+
+	//now send it signal 0 and see what happens
+
+	err = process.Signal(syscall.Signal(0))
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+
 }

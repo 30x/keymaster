@@ -1,23 +1,24 @@
 package nginx
 
 import (
-	"path"
-	"os"
 	"bufio"
-	"text/template"
-	"github.com/30x/keymaster/client"
 	"bytes"
-	"io/ioutil"
-	"strings"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
+	"text/template"
+
+	"github.com/30x/keymaster/client"
 )
 
 func Template(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
 
-	pipesFileMap := make(map[string]string) // fq pipe name -> pipe file path
+	pipesFileMap := make(map[string]string)                    // fq pipe name -> pipe file path
 	bundleConfMap := make(map[*client.DeploymentBundle]string) // bundle -> bundle.conf path
 
-	for i, b := range deployment.Bundles {
+	for _, b := range deployment.Bundles {
 		bundlePath := path.Join(deploymentDir, b.BundleID)
 		bundleConf := path.Join(bundlePath, "bundle.conf")
 		bundle := b
@@ -40,9 +41,9 @@ func Template(deploymentDir string, deployment *client.Deployment) *client.Deplo
 
 	context := &TemplateContext{
 		deploymentDir: deploymentDir,
-		deployment: deployment,
+		deployment:    deployment,
 		bundleConfMap: bundleConfMap,
-		pipesFileMap: pipesFileMap, // fq pipe name -> pipe file path
+		pipesFileMap:  pipesFileMap, // fq pipe name -> pipe file path
 	}
 
 	err := templateNginxConf(context)
@@ -108,10 +109,10 @@ func runTemplate(fileName string, context interface{}) *client.DeploymentError {
 
 type TemplateContext struct {
 	deploymentDir string
-	deployment *client.Deployment
+	deployment    *client.Deployment
 	bundleConfMap map[*client.DeploymentBundle]string
-	bundleConfs []string
-	pipesFileMap map[string]string // fq pipe name -> definition path
+	bundleConfs   []string
+	pipesFileMap  map[string]string // fq pipe name -> definition path
 }
 
 func (s TemplateContext) Bundles() (string, error) {
@@ -137,7 +138,7 @@ func (s TemplateContext) Pipes() map[string]string {
 }
 
 type DeploymentBundleContext struct {
-	bundle *client.DeploymentBundle
+	bundle  *client.DeploymentBundle
 	context *TemplateContext
 }
 
@@ -148,7 +149,6 @@ func (c DeploymentBundleContext) Pipe(pipeName string) (string, error) {
 	}
 	return fmt.Sprintf(pipeInclude, fqPipeName), nil
 }
-
 
 func fqPipeName(bundle client.DeploymentBundle, pipeName string) string {
 	return fmt.Sprintf("%s_%s", bundle.BundleID, pipeName)

@@ -1,14 +1,15 @@
 package nginx_test
 
 import (
+	"io"
+	"os"
+	"path"
+
+	"github.com/30x/keymaster/client"
+	"github.com/30x/keymaster/nginx"
+	"github.com/30x/keymaster/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/30x/keymaster/nginx"
-	"path"
-	"github.com/30x/keymaster/client"
-	"os"
-	"io"
-	"github.com/30x/keymaster/util"
 )
 
 var _ = Describe("templating", func() {
@@ -17,18 +18,18 @@ var _ = Describe("templating", func() {
 
 		systemBundle := &client.SystemBundle{
 			BundleID: "bundle1",
-			URL: "file://../test/testsystem.zip",
+			URL:      "file://../test/testsystem.zip",
 		}
 
 		bundles := make([]*client.DeploymentBundle, 1)
 		bundles[0] = &client.DeploymentBundle{
 			BundleID: "bundle1",
-			URL: "file://../test/testbundle.zip",
+			URL:      "file://../test/testbundle.zip",
 		}
 
 		deployment := &client.Deployment{
-			ID: "deployment_id",
-			System: systemBundle,
+			ID:      "deployment_id",
+			System:  systemBundle,
 			Bundles: bundles,
 		}
 
@@ -58,7 +59,8 @@ var _ = Describe("templating", func() {
 		deploymentErr := nginx.Template(stageDir, deployment)
 		Expect(deploymentErr).To(BeNil())
 
-		err = nginx.TestConfig(nginxConf)
+		os.MkdirAll("/tmp/nginx_test", 0777)
+		err = nginx.TestConfig("/tmp/nginx_test", nginxConf)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

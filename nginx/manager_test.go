@@ -2,6 +2,7 @@ package nginx_test
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -12,14 +13,17 @@ import (
 )
 
 const nginxDir = "/tmp/nginx_test"
+const nginxPidFile = "/tmp/nginx_test/gozerian.pid"
 const basePath = "/Users/apigee/develop/go/src/github.com/30x/keymaster"
 
 var _ = Describe("Manager", func() {
 
+	BeforeEach(func() {
+		os.MkdirAll(nginxDir, 0777)
+	})
+
 	//tests a valid configuration on the first pass works
 	It("Valid Configuration Single Pass", func() {
-
-		os.MkdirAll(nginxDir, 0777)
 
 		stager := &stageTester{
 			testConfigDir: basePath + "/test/testbundles/validBundle",
@@ -34,7 +38,7 @@ var _ = Describe("Manager", func() {
 			mockDeployment: deployment,
 		}
 
-		manager := nginx.NewManager(apiClient, stager, nginxDir, 1)
+		manager := nginx.NewManager(apiClient, stager, nginxDir, nginxPidFile, 1)
 
 		err := manager.ApplyDeployment()
 
@@ -50,8 +54,6 @@ var _ = Describe("Manager", func() {
 
 	//tests a valid configuration on the first pass works
 	It("Valid Configuration Multiple Pass", func() {
-
-		os.MkdirAll(nginxDir, 0777)
 
 		for i := 0; i < 5; i++ {
 
@@ -70,7 +72,7 @@ var _ = Describe("Manager", func() {
 				mockDeployment: deployment,
 			}
 
-			manager := nginx.NewManager(apiClient, stager, nginxDir, 1)
+			manager := nginx.NewManager(apiClient, stager, nginxDir, nginxPidFile, 1)
 
 			err := manager.ApplyDeployment()
 
@@ -89,8 +91,6 @@ var _ = Describe("Manager", func() {
 
 	It("Single Conflict Configuration", func() {
 
-		os.MkdirAll(nginxDir, 0777)
-
 		stager := &stageTester{
 			testConfigDir: basePath + "/test/testbundles/singleConflictPathBundle",
 		}
@@ -104,7 +104,7 @@ var _ = Describe("Manager", func() {
 			mockDeployment: deployment,
 		}
 
-		manager := nginx.NewManager(apiClient, stager, nginxDir, 1)
+		manager := nginx.NewManager(apiClient, stager, nginxDir, nginxPidFile, 1)
 
 		err := manager.ApplyDeployment()
 
@@ -125,8 +125,6 @@ var _ = Describe("Manager", func() {
 	//TODO, this isn't returning the error message, only an error code
 	It("Multiple invalid files", func() {
 
-		os.MkdirAll(nginxDir, 0777)
-
 		stager := &stageTester{
 			testConfigDir: basePath + "/test/testbundles/multipleInvalidBundle",
 		}
@@ -140,15 +138,16 @@ var _ = Describe("Manager", func() {
 			mockDeployment: deployment,
 		}
 
-		manager := nginx.NewManager(apiClient, stager, nginxDir, 1)
+		manager := nginx.NewManager(apiClient, stager, nginxDir, nginxPidFile, 1)
 
 		err := manager.ApplyDeployment()
 
 		//no error with valid bundle
-		Expect(err).Should(BeNil())
+		Expect(err).ShouldNot(BeNil())
 
 		//check the error is applicable
 		expectedErrorMessage := "[emerg] directive \"listen\" is not terminated by \";\""
+		log.Printf("Error is %s", err.Error())
 		containsMessage := strings.Contains(err.Error(), expectedErrorMessage)
 		Expect(containsMessage).Should(BeTrue(), fmt.Sprintf("Should contain error message %s. Error message was %s", expectedErrorMessage, err))
 		//validate we returned successfully

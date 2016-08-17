@@ -11,6 +11,7 @@ import (
 //Manager The config manager
 type Manager struct {
 	client       client.ApidClient
+	nginxPidFile string
 	nginxWorkDir string
 	pollTimeout  int
 	stageManager StageManager
@@ -21,11 +22,12 @@ type Manager struct {
 }
 
 //NewManager Create a new instance of the configuration manager
-func NewManager(apiClient client.ApidClient, stageManager StageManager, nginxDir string, pollTimeout int) *Manager {
+func NewManager(apiClient client.ApidClient, stageManager StageManager, nginxWorkDir string, nginxPidFile string, pollTimeout int) *Manager {
 	return &Manager{
 		client:       apiClient,
 		stageManager: stageManager,
-		nginxWorkDir: nginxDir,
+		nginxWorkDir: nginxWorkDir,
+		nginxPidFile: nginxPidFile,
 		pollTimeout:  pollTimeout,
 	}
 }
@@ -70,27 +72,29 @@ func (manager *Manager) ApplyDeployment() error {
 	err = TestConfig(manager.nginxWorkDir, systemFile)
 
 	if err != nil {
-		deploymentError = &client.DeploymentError{
-			ErrorCode: client.ErrorCodeTODO,
-			Reason:    err.Error(),
-		}
-
-		manager.deploymentFailed(deployment, deploymentError)
+		manager.signalError(deployment, err)
 		return err
 	}
 
 	//reload or start nginx if not running
 	//TODO detect start state from PID
 
-	err = Reload(manager.nginxWorkDir, systemFile)
+	isRunning, err := IsRunning(manager.nginxPidFile)
 
 	if err != nil {
-		deploymentError = &client.DeploymentError{
-			ErrorCode: client.ErrorCodeTODO,
-			Reason:    err.Error(),
-		}
+		manager.signalError(deployment, err)
 
-		manager.deploymentFailed(deployment, deploymentError)
+		return err
+	}
+
+	if isRunning {
+		err = Reload(manager.nginxWorkDir, systemFile)
+	} else {
+		err = Start(manager.nginxWorkDir, systemFile)
+	}
+
+	if err != nil {
+		manager.signalError(deployment, err)
 
 		return err
 	}
@@ -113,6 +117,16 @@ func (manager *Manager) ApplyDeployment() error {
 	//TODO add a template where the deployment.ID is returned at localhost:5280/ to validate we're actually running and get the status of the system
 
 	return nil
+
+}
+
+func (manager *Manager) signalError(deployment *client.Deployment, err error) {
+	deploymentError := &client.DeploymentError{
+		ErrorCode: client.ErrorCodeTODO,
+		Reason:    err.Error(),
+	}
+
+	manager.deploymentFailed(deployment, deploymentError)
 
 }
 

@@ -16,6 +16,10 @@ var _ = Describe("nginx", func() {
 
 	Describe("TestConfig", func() {
 
+		BeforeEach(func() {
+			os.MkdirAll("/tmp/nginxtest", 0777)
+		})
+
 		It("should return no error from good config", func() {
 			tmpfile, err := writeConf(valid_conf)
 			Expect(err).NotTo(HaveOccurred())
