@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -92,13 +93,13 @@ func IsRunning(pidFile string) (bool, error) {
 	}
 
 	//nothing in the file, it's not running
-	fileString := string(fileData)
+	fileString := strings.TrimSpace(string(fileData))
 
 	if len(fileString) == 0 {
 		return false, nil
 	}
 
-	pid, err := strconv.Atoi(string(fileData))
+	pid, err := strconv.Atoi(fileString)
 
 	if err != nil {
 		return false, err

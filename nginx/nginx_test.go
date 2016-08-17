@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/30x/keymaster/nginx"
+	"github.com/30x/keymaster/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,9 +16,15 @@ import (
 var _ = Describe("nginx", func() {
 
 	Describe("TestConfig", func() {
+		testdir := ""
 
 		BeforeEach(func() {
-			os.MkdirAll("/tmp/nginxtest", 0777)
+			testdir, err := util.MkTempDir("", "setup", 0755)
+
+			Expect(err).Should(BeNil())
+
+			defer os.RemoveAll(testdir)
+
 		})
 
 		It("should return no error from good config", func() {
@@ -25,7 +32,7 @@ var _ = Describe("nginx", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer os.RemoveAll(path.Dir(tmpfile.Name()))
 
-			err = nginx.TestConfig("/tmp/nginxtest", tmpfile.Name())
+			err = nginx.TestConfig(testdir, tmpfile.Name())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -34,7 +41,7 @@ var _ = Describe("nginx", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer os.RemoveAll(path.Dir(tmpfile.Name()))
 
-			err = nginx.TestConfig("/tmp/nginxtest", tmpfile.Name())
+			err = nginx.TestConfig(testdir, tmpfile.Name())
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -43,7 +50,7 @@ var _ = Describe("nginx", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer os.RemoveAll(path.Dir(tmpfile.Name()))
 
-			err = nginx.TestConfig("/tmp/nginxtest", tmpfile.Name())
+			err = nginx.TestConfig(testdir, tmpfile.Name())
 			Expect(err).To(HaveOccurred())
 		})
 	})
