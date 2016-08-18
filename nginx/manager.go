@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/30x/keymaster/client"
 )
@@ -90,7 +91,7 @@ func (manager *Manager) ApplyDeployment() error {
 	if isRunning {
 		err = Reload(manager.nginxWorkDir, systemFile)
 	} else {
-		err = Start(manager.nginxWorkDir, systemFile)
+		err = Start(manager.nginxWorkDir, systemFile, 5*time.Second)
 	}
 
 	if err != nil {

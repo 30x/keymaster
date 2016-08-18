@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/30x/keymaster/client"
@@ -13,28 +14,44 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const nginxPidFile = "/usr//local/var/run/openresty.pid"
+const nginxPidFile = "/usr/local/var/run/openresty.pid"
 const basePath = "/Users/apigee/develop/go/src/github.com/30x/keymaster"
 
 var _ = Describe("Manager", func() {
 
-	AfterEach(func() {
+	// BeforeEach(func() {
 
-		nginxDir, err := util.MkTempDir("", "setup", 0755)
+	// 	nginxDir, err := util.MkTempDir("", "setup", 0755)
+
+	// 	Expect(err).Should(BeNil())
+
+	// 	defer os.RemoveAll(nginxDir)
+
+	// 	//stop nginx, just in case it is running on the system
+	// 	nginx.Stop(nginxDir)
+	// })
+
+	// AfterEach(func() {
+
+	// 	nginxDir, err := util.MkTempDir("", "setup", 0755)
+
+	// 	Expect(err).Should(BeNil())
+
+	// 	defer os.RemoveAll(nginxDir)
+
+	// 	//stop nginx, just in case it is running on the system
+	// 	nginx.Stop(nginxDir)
+	// })
+
+	//tests a valid configuration on the first pass works
+	FIt("Valid Configuration Single Pass", func() {
+
+		fullPath, err := filepath.Abs("../test/testbundles/validBundle")
 
 		Expect(err).Should(BeNil())
 
-		defer os.RemoveAll(nginxDir)
-
-		//stop nginx, just in case it is running on the system
-		nginx.Stop(nginxDir)
-	})
-
-	//tests a valid configuration on the first pass works
-	PIt("Valid Configuration Single Pass", func() {
-
 		stager := &stageTester{
-			testConfigDir: basePath + "/test/testbundles/validBundle",
+			testConfigDir: fullPath,
 		}
 
 		deployment := &client.Deployment{
@@ -45,7 +62,9 @@ var _ = Describe("Manager", func() {
 
 		Expect(err).Should(BeNil())
 
+		defer nginx.Stop(nginxDir)
 		defer os.RemoveAll(nginxDir)
+
 		//wire up the resposne
 		apiClient := &apiClientTester{
 			mockDeployment: deployment,

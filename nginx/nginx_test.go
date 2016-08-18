@@ -63,7 +63,7 @@ var _ = Describe("nginx", func() {
 			tmpDir := path.Dir(tmpFile.Name())
 			defer os.RemoveAll(tmpDir)
 
-			err = nginx.Start(tmpDir, tmpFile.Name())
+			err = nginx.Start(tmpDir, tmpFile.Name(), 10*time.Second)
 			Expect(err).NotTo(HaveOccurred())
 			defer nginx.Stop(tmpDir)
 
@@ -80,7 +80,7 @@ var _ = Describe("nginx", func() {
 			tmpDir := path.Dir(tmpFile.Name())
 			defer os.RemoveAll(tmpDir)
 
-			err = nginx.Start(tmpDir, tmpFile.Name())
+			err = nginx.Start(tmpDir, tmpFile.Name(), 10*time.Second)
 			Expect(err).NotTo(HaveOccurred())
 			defer nginx.Stop(tmpDir)
 
@@ -107,7 +107,7 @@ var _ = Describe("nginx", func() {
 			tmpDir := path.Dir(tmpFile.Name())
 			defer os.RemoveAll(tmpDir)
 
-			err = nginx.Start(tmpDir, tmpFile.Name())
+			err = nginx.Start(tmpDir, tmpFile.Name(), 10*time.Second)
 			Expect(err).NotTo(HaveOccurred())
 			defer nginx.Stop(tmpDir)
 
