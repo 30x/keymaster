@@ -85,7 +85,7 @@ var _ = Describe("Manager", func() {
 	})
 
 	//tests a valid configuration on the first pass works
-	PIt("Valid Configuration Multiple Pass", func() {
+	It("Valid Configuration Multiple Pass", func() {
 
 		nginxDir, err := util.MkTempDir("", "deployment_id_2", 0755)
 
@@ -127,7 +127,7 @@ var _ = Describe("Manager", func() {
 
 	//TODO, test success, fail, success
 
-	PIt("Single Conflict Configuration", func() {
+	It("Single Conflict Configuration", func() {
 
 		stager := &stageTester{
 			testConfigDir: basePath + "/test/testbundles/singleConflictPathBundle",
@@ -167,7 +167,7 @@ var _ = Describe("Manager", func() {
 	})
 
 	//TODO, this isn't returning the error message, only an error code
-	PIt("Multiple invalid files", func() {
+	It("Multiple invalid files", func() {
 
 		stager := &stageTester{
 			testConfigDir: basePath + "/test/testbundles/multipleInvalidBundle",

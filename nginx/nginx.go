@@ -78,13 +78,25 @@ func Start(prefixPath, configFilePath string, startTimeout time.Duration) error 
 		return err
 	}
 
+	var timeoutErr error
+
 	//Set a timer to timeout
 	timer := time.AfterFunc(startTimeout, func() {
 		log.Printf("Timeout occured when waiting for nginx start to exist after %s.  Pid is %d", startTimeout, command.ProcessState.Pid())
-		// command.Process.Kill()
-		// command.Process.Signal(syscall.SIGKILL)
+		//try to kill the nginx process from pid here, see what happens
 
-		//TODO try to kill the nginx process from pid here, see what happens
+		timeoutErr = errors.New("Process timed out waiting for nginx to start")
+
+		//we have to stop in this timeout block. If we don't, we can't seem to stop nginx after we kill the start process
+		err := Stop(prefixPath)
+
+		if err != nil {
+			log.Printf("WARNING: Unable to stop NGINX after timeout.  Process may still be running in an unknown state. Error is %s", err)
+		}
+
+		//kill the start process so wait returns
+		command.Process.Kill()
+
 	})
 
 	//after error fails we want to stop the timer
@@ -101,12 +113,25 @@ func Start(prefixPath, configFilePath string, startTimeout time.Duration) error 
 
 	log.Printf("Stderr :%s", stdErrString)
 
-	if !command.ProcessState.Success() {
+	if !command.ProcessState.Success() && timeoutErr == nil {
 		err = errors.New("Process exiting with non 0 error code")
+
+		//we timed out, report accordingly
+	} else if len(stdErrString) > 0 && timeoutErr == nil {
+		err = errors.New("Errors were reported to stderr.  Stopping nginx")
+
+		//if we didn't timeout we haven't stopped already, try to stop the process
+
+		stopErr := Stop(prefixPath)
+
+		if stopErr != nil {
+			log.Printf("WARNING: Unable to stop NGINX after errors reported in stdErr.  Process may still be running in an unknown state. Error is %s", stopErr)
+		}
+
 	}
 
 	if err != nil {
-		log.Printf("An error occured waiting for nginx start to complete.  Not sure it started. Error is %s", err)
+		log.Printf("An error occured starting nginx.  Error is %s", err)
 
 		return &StartError{
 			StdOut: stdOutString,
@@ -141,6 +166,10 @@ func IsRunning(pidFile string) (bool, error) {
 
 	if err != nil {
 		return false, err
+	}
+
+	if pid == -1 {
+		return false, nil
 	}
 
 	process, err := os.FindProcess(pid)
@@ -186,6 +215,7 @@ func killProcess(pidFile string) error {
 	return nil
 }
 
+//getNginxPid Get the PID from the nginx file.  A value of -1 indicates the process is not running
 func getNginxPid(pidFile string) (int, error) {
 	_, err := os.Stat(pidFile)
 
@@ -195,26 +225,26 @@ func getNginxPid(pidFile string) (int, error) {
 			return 0, err
 		}
 
-		return 0, nil
+		return -1, nil
 	}
 
 	fileData, err := ioutil.ReadFile(pidFile)
 
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 
 	//nothing in the file, it's not running
 	fileString := strings.TrimSpace(string(fileData))
 
 	if len(fileString) == 0 {
-		return 0, nil
+		return -1, nil
 	}
 
 	pid, err := strconv.Atoi(fileString)
 
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 
 	return pid, err
