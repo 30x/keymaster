@@ -113,11 +113,13 @@ func Start(prefixPath, configFilePath string, startTimeout time.Duration) error 
 
 	log.Printf("Stderr :%s", stdErrString)
 
-	if !command.ProcessState.Success() && timeoutErr == nil {
+	if timeoutErr != nil {
+		err = timeoutErr
+	} else if !command.ProcessState.Success() {
 		err = errors.New("Process exiting with non 0 error code")
 
 		//we timed out, report accordingly
-	} else if len(stdErrString) > 0 && timeoutErr == nil {
+	} else if len(stdErrString) > 0 {
 		err = errors.New("Errors were reported to stderr.  Stopping nginx")
 
 		//if we didn't timeout we haven't stopped already, try to stop the process
