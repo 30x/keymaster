@@ -18,6 +18,9 @@ const (
 
 	//ConfigNginxDir the directory that nginx is located in
 	ConfigNginxDir = "nginx_dir"
+
+	//ConfigNginxDir the directory that nginx is located in
+	ConfigNginxPid = "nginx_pid_file"
 )
 
 func main() {
@@ -30,10 +33,12 @@ func main() {
 
 	//use openresty for now.  Must have LUAJIT installed
 	v.SetDefault(ConfigNginxDir, " /usr/local/Cellar/openresty/1.9.15.1/")
+	v.SetDefault(ConfigNginxPid, "/usr/local/var/run/openresty.pid")
 
 	apidURI := v.GetString(ConfigApidURI)
 	timeout := v.GetInt(ConfigPollWait)
 	nginxDir := v.GetString(ConfigNginxDir)
+	nginxPid := v.GetString(ConfigNginxPid)
 
 	client, err := client.CreateApidClient(apidURI)
 
@@ -43,7 +48,7 @@ func main() {
 
 	stageManager := new(nginx.StageManagerImpl)
 
-	manager := nginx.NewManager(client, stageManager, nginxDir, timeout)
+	manager := nginx.NewManager(client, stageManager, nginxDir, nginxPid, timeout)
 
 	//loop forever writing configs
 	for {
