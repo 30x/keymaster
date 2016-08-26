@@ -124,10 +124,12 @@ func (apidClient *ApidClientImpl) PollDeployments(etag string, timeout int) (*De
 		req.Header.Add("If-None-Match", etag)
 	}
 
-	if timeout > 0 {
-		req.Header.Add("block", string(timeout))
-	}
-	req.Header.Add("Accept", "application/zip")
+	//TODO not ready yet, uncomment when long poll is implemented
+	// if timeout > 0 {
+	// 	req.Header.Add("block", string(timeout))
+	// }
+
+	req.Header.Add("Accept", "application/json")
 
 	resp, err := apidClient.client.Do(req)
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/30x/keymaster/client"
 )
@@ -60,7 +61,7 @@ func (manager *Manager) ApplyDeployment() error {
 	unzippedDir, deploymentError := manager.stageManager.Stage(deployment)
 
 	if deploymentError != nil {
-		manager.deploymentFailed(deployment, deploymentError)
+		manager.setDeploymentStatus(deployment, deploymentError)
 		return err
 	}
 
@@ -90,7 +91,7 @@ func (manager *Manager) ApplyDeployment() error {
 	if isRunning {
 		err = Reload(manager.nginxWorkDir, systemFile)
 	} else {
-		err = Start(manager.nginxWorkDir, systemFile)
+		err = Start(manager.nginxWorkDir, systemFile, 5*time.Second)
 	}
 
 	if err != nil {
@@ -114,6 +115,7 @@ func (manager *Manager) ApplyDeployment() error {
 		log.Printf("Unable to remove directory %s.  Error is %s", previousUnzipped, err)
 	}
 
+	manager.setDeploymentStatus(deployment, nil)
 	//TODO add a template where the deployment.ID is returned at localhost:5280/ to validate we're actually running and get the status of the system
 
 	return nil
@@ -126,11 +128,11 @@ func (manager *Manager) signalError(deployment *client.Deployment, err error) {
 		Reason:    err.Error(),
 	}
 
-	manager.deploymentFailed(deployment, deploymentError)
+	manager.setDeploymentStatus(deployment, deploymentError)
 
 }
 
-func (manager *Manager) deploymentFailed(deployment *client.Deployment, err *client.DeploymentError) {
+func (manager *Manager) setDeploymentStatus(deployment *client.Deployment, err *client.DeploymentError) {
 	deploymentResult := &client.DeploymentResult{
 		ID:     deployment.ID,
 		Status: client.StatusSuccess,
