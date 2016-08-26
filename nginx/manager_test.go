@@ -44,7 +44,7 @@ var _ = Describe("Manager", func() {
 	// })
 
 	//tests a valid configuration on the first pass works
-	FIt("Valid Configuration Single Pass", func() {
+	It("Valid Configuration Single Pass", func() {
 
 		fullPath, err := filepath.Abs("../test/testbundles/validBundle")
 
