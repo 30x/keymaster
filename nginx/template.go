@@ -29,7 +29,10 @@ func Template(deploymentDir string, deployment *client.Deployment) *client.Deplo
 			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 		}
 		bundleMetadata := bundleMetadataDef{}
-		yaml.Unmarshal(yamlBytes, &bundleMetadata)
+		err = yaml.Unmarshal(yamlBytes, &bundleMetadata)
+		if err != nil {
+			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
+		}
 		pipePaths := bundleMetadata.Pipes
 		if pipePaths == nil {
 			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
