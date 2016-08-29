@@ -15,7 +15,6 @@ import (
 )
 
 const nginxPidFile = "/usr/local/var/run/openresty.pid"
-const basePath = "/Users/apigee/develop/go/src/github.com/30x/keymaster"
 
 var _ = Describe("Manager", func() {
 
@@ -96,8 +95,12 @@ var _ = Describe("Manager", func() {
 		//wire up the resposne
 		apiClient := &apiClientTester{}
 
+		fullPath, err := filepath.Abs("../test/testbundles/validBundle")
+
+		Expect(err).Should(BeNil())
+
 		stager := &stageTester{
-			testConfigDir: basePath + "/test/testbundles/validBundle",
+			testConfigDir: fullPath,
 		}
 
 		for i := 0; i < 5; i++ {
@@ -129,8 +132,12 @@ var _ = Describe("Manager", func() {
 
 	It("Single Conflict Configuration", func() {
 
+		fullPath, err := filepath.Abs("../test/testbundles/singleConflictPathBundle")
+
+		Expect(err).Should(BeNil())
+
 		stager := &stageTester{
-			testConfigDir: basePath + "/test/testbundles/singleConflictPathBundle",
+			testConfigDir: fullPath,
 		}
 
 		deployment := &client.Deployment{
@@ -156,7 +163,7 @@ var _ = Describe("Manager", func() {
 		Expect(err).ShouldNot(BeNil())
 
 		//check the error is applicable
-		expectedErrorMessage := "[warn] conflicting server name \"localhost\" on 0.0.0.0:9000"
+		expectedErrorMessage := "[emerg] a duplicate listen 127.0.0.1:8080"
 		containsMessage := strings.Contains(err.Error(), expectedErrorMessage)
 		Expect(containsMessage).Should(BeTrue(), fmt.Sprintf("Should contain error message %s. Error message was %s", expectedErrorMessage, err))
 		//validate we returned successfully
@@ -169,8 +176,12 @@ var _ = Describe("Manager", func() {
 	//TODO, this isn't returning the error message, only an error code
 	It("Multiple invalid files", func() {
 
+		fullPath, err := filepath.Abs("../test/testbundles/multipleInvalidBundle")
+
+		Expect(err).Should(BeNil())
+
 		stager := &stageTester{
-			testConfigDir: basePath + "/test/testbundles/multipleInvalidBundle",
+			testConfigDir: fullPath,
 		}
 
 		deployment := &client.Deployment{
@@ -196,7 +207,7 @@ var _ = Describe("Manager", func() {
 		Expect(err).ShouldNot(BeNil())
 
 		//check the error is applicable
-		expectedErrorMessage := "[emerg] directive \"listen\" is not terminated by \";\""
+		expectedErrorMessage := "[emerg] invalid number of arguments in \"set\" directive"
 		log.Printf("Error is %s", err.Error())
 		containsMessage := strings.Contains(err.Error(), expectedErrorMessage)
 		Expect(containsMessage).Should(BeTrue(), fmt.Sprintf("Should contain error message %s. Error message was %s", expectedErrorMessage, err))

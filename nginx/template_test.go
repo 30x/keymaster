@@ -1,15 +1,16 @@
 package nginx_test
 
 import (
+	"io"
+	"os"
+	"os/exec"
+	"path"
+
+	"github.com/30x/keymaster/client"
+	"github.com/30x/keymaster/nginx"
+	"github.com/30x/keymaster/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/30x/keymaster/nginx"
-	"path"
-	"github.com/30x/keymaster/client"
-	"os"
-	"io"
-	"github.com/30x/keymaster/util"
-	"os/exec"
 )
 
 var _ = Describe("templating", func() {
@@ -18,30 +19,30 @@ var _ = Describe("templating", func() {
 
 		systemBundle := &client.SystemBundle{
 			BundleID: "bundle1",
-			URL: "file://../test/testsystem.zip",
+			URL:      "file://../test/testsystem.zip",
 		}
 
 		var bundles []*client.DeploymentBundle
 
 		bundles = append(bundles, &client.DeploymentBundle{
-			BundleID: "bundle1",
-			URL: "",
-			BasePath: "basepath",
-			Target: "http://localhost",
+			BundleID:     "bundle1",
+			URL:          "",
+			BasePath:     "basepath",
+			Target:       "http://localhost",
 			VirtualHosts: []string{"localhost:8080"},
 		})
 
 		bundles = append(bundles, &client.DeploymentBundle{
-			BundleID: "bundle2",
-			URL: "",
-			BasePath: "basepath2",
-			Target: "http://localhost",
+			BundleID:     "bundle2",
+			URL:          "",
+			BasePath:     "basepath2",
+			Target:       "http://localhost",
 			VirtualHosts: []string{"localhost:8081"},
 		})
 
 		deployment := &client.Deployment{
-			ID: "deployment_id",
-			System: systemBundle,
+			ID:      "deployment_id",
+			System:  systemBundle,
 			Bundles: bundles,
 		}
 
