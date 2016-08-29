@@ -53,9 +53,12 @@ type DeploymentBundle struct {
 	BundleID string `json:"bundleId"`
 	AuthCode string `json:"authCode"`
 	URL      string `json:"url"`
+	BasePath string `json:"basePath"`
+	Target   string `json:"target"`
+	VirtualHosts []string `json:"virtualHosts"`
 }
 
-//FilePath parse the file path in teh bundle
+//FilePath parse the file path in the bundle
 func (bundle *DeploymentBundle) FilePath() string {
 	return cleanFileURL(bundle.URL)
 }

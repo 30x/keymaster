@@ -46,7 +46,7 @@ var _ = Describe("stage", func() {
 
 			Expect(bundleDir).Should(BeAnExistingFile())
 
-			nginxBundle := path.Join(bundleDir, "bundle.conf")
+			nginxBundle := path.Join(bundleDir, "bundle.yaml")
 			Expect(nginxBundle).Should(BeAnExistingFile())
 
 			pipeFile := path.Join(bundleDir, "pipes", "apikey.yaml")
