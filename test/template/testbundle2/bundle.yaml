@@ -1,0 +1,3 @@
+pipes:
+  /: dump
+  /iloveapis: apikey

@@ -2,7 +2,6 @@ package nginx
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,18 +10,37 @@ import (
 	"text/template"
 
 	"github.com/30x/keymaster/client"
+	"gopkg.in/yaml.v2"
 )
+
+type bundleMetadataDef struct {
+	Pipes map[string]string `json:"pipes"`
+}
 
 func Template(deploymentDir string, deployment *client.Deployment) *client.DeploymentError {
 
-	pipesFileMap := make(map[string]string)                    // fq pipe name -> pipe file path
-	bundleConfMap := make(map[*client.DeploymentBundle]string) // bundle -> bundle.conf path
+	bundles := make(map[string]bundle)
 
 	for _, b := range deployment.Bundles {
 		bundlePath := path.Join(deploymentDir, b.BundleID)
-		bundleConf := path.Join(bundlePath, "bundle.conf")
-		bundle := b
-		bundleConfMap[bundle] = bundleConf
+
+		yamlBytes, err := ioutil.ReadFile(path.Join(bundlePath, "bundle.yaml"))
+		if err != nil {
+			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
+		}
+		bundleMetadata := bundleMetadataDef{}
+		err = yaml.Unmarshal(yamlBytes, &bundleMetadata)
+		if err != nil {
+			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
+		}
+		pipePaths := bundleMetadata.Pipes
+		if pipePaths == nil {
+			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
+		}
+		pathPipes := make(map[string]string)
+		for k, v := range pipePaths {
+			pathPipes[v] = k
+		}
 
 		pipesDir := path.Join(bundlePath, "pipes")
 		fis, err := ioutil.ReadDir(pipesDir)
@@ -30,47 +48,46 @@ func Template(deploymentDir string, deployment *client.Deployment) *client.Deplo
 			return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 		}
 
-		for _, fi := range fis {
-			if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".yaml") {
-				pipeName := strings.TrimSuffix(fi.Name(), ".yaml")
-				fqPipeName := fmt.Sprintf("%s_%s", b.BundleID, pipeName)
-				pipesFileMap[fqPipeName] = path.Join(pipesDir, fi.Name())
+		pipes := make(map[string]pipe)
+		for _, fileInfo := range fis {
+			if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".yaml") {
+				filePath := path.Join(pipesDir, fileInfo.Name())
+				pipeName := strings.TrimSuffix(fileInfo.Name(), ".yaml")
+				pipePath := pathPipes[pipeName]
+
+				if pipePath == "" {
+					errMsg := fmt.Sprintf("Pipe named %s does not exist in bundle %s", pipeName, b.BundleID)
+					return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: errMsg}
+				}
+
+				p := pipe{
+					filePath: filePath,
+					Name:     pipeName,
+					Path:     pipePath,
+				}
+
+				pipes[pipeName] = p
 			}
 		}
-	}
 
-	context := &TemplateContext{
-		deploymentDir: deploymentDir,
-		deployment:    deployment,
-		bundleConfMap: bundleConfMap,
-		pipesFileMap:  pipesFileMap, // fq pipe name -> pipe file path
-	}
-
-	err := templateNginxConf(context)
-	if err != nil {
-		return err
-	}
-
-	return templateBundleConfs(context)
-}
-
-func templateNginxConf(context *TemplateContext) *client.DeploymentError {
-
-	nginxConf := path.Join(context.deploymentDir, "nginx.conf")
-	return runTemplate(nginxConf, context)
-}
-
-func templateBundleConfs(context *TemplateContext) *client.DeploymentError {
-
-	for _, bundle := range context.deployment.Bundles {
-		bundleConf := context.bundleConfMap[bundle]
-		bundleContext := DeploymentBundleContext{bundle: bundle, context: context}
-		err := runTemplate(bundleConf, bundleContext)
-		if err != nil {
-			return err
+		bn := bundle{
+			bundlePath:   bundlePath,
+			VirtualHosts: b.VirtualHosts,
+			Basepath:     b.BasePath,
+			Target:       b.Target,
+			Pipes:        pipes,
 		}
+		bundles[b.BundleID] = bn
 	}
-	return nil
+
+	nginxConfContext := &templateContext{
+		deployment:    deployment,
+		deploymentDir: deploymentDir,
+		Bundles:       bundles,
+	}
+
+	nginxConfTemplate := path.Join(deploymentDir, "nginx.conf")
+	return runTemplate(nginxConfTemplate, nginxConfContext)
 }
 
 func runTemplate(fileName string, context interface{}) *client.DeploymentError {
@@ -99,82 +116,28 @@ func runTemplate(fileName string, context interface{}) *client.DeploymentError {
 		return &client.DeploymentError{ErrorCode: client.ErrorCodeTODO, Reason: err.Error()}
 	}
 
-	// for debugging, writes file to stdout...
-	//cmd := exec.Command("cat", file)
-	//cmd.Stdout = os.Stdout
-	//cmd.Run()
-
 	return nil
 }
 
-type TemplateContext struct {
-	deploymentDir string
+type pipe struct {
+	filePath string
+
+	Name string
+	Path string
+}
+
+type bundle struct {
+	bundlePath string
+
+	VirtualHosts []string
+	Basepath     string
+	Target       string
+	Pipes        map[string]pipe
+}
+
+type templateContext struct {
 	deployment    *client.Deployment
-	bundleConfMap map[*client.DeploymentBundle]string
-	bundleConfs   []string
-	pipesFileMap  map[string]string // fq pipe name -> definition path
+	deploymentDir string
+
+	Bundles map[string]bundle
 }
-
-func (s TemplateContext) Bundles() (string, error) {
-
-	tmpl := template.New("bundles")
-	parsedTemplate, err := tmpl.Parse(bundlesTemplate)
-	if err != nil {
-		return "", err
-	}
-
-	buf := &bytes.Buffer{}
-	err = parsedTemplate.Execute(buf, s)
-
-	return buf.String(), err
-}
-
-func (s TemplateContext) BundleNames() []string {
-	return s.bundleConfs
-}
-
-func (s TemplateContext) Pipes() map[string]string {
-	return s.pipesFileMap
-}
-
-type DeploymentBundleContext struct {
-	bundle  *client.DeploymentBundle
-	context *TemplateContext
-}
-
-func (c DeploymentBundleContext) Pipe(pipeName string) (string, error) {
-	fqPipeName := fqPipeName(*c.bundle, pipeName)
-	if c.context.pipesFileMap[fqPipeName] == "" { // no matching pipe
-		return "", fmt.Errorf("No pipe named '%s' in bundle '%s'", pipeName, c.bundle.BundleID)
-	}
-	return fmt.Sprintf(pipeInclude, fqPipeName), nil
-}
-
-func fqPipeName(bundle client.DeploymentBundle, pipeName string) string {
-	return fmt.Sprintf("%s_%s", bundle.BundleID, pipeName)
-}
-
-var pipeInclude = `
-      set $goz_pipe '%s';
-      include goz_pipe.conf;
-`
-
-var bundlesTemplate = `
-  lua_package_path "./lua/?.lua;;;";
-
-  init_worker_by_lua_block {
-    libgozerian = require('lua-gozerian')
-      -- pipes are assigned to yaml config urls (may be file: or http: refs)
-      local pipes = {
-      {{range $name, $file := .Pipes}}
-        {{ $name }} = '{{ $file }}',
-      {{end}}
-      }
-
-      libgozerian.init(pipes)
-  }
-
-  {{range $name := .BundleNames}}
-    include {{ $name }}
-  {{end}}
-`

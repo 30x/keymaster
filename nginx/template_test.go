@@ -9,6 +9,7 @@ import (
 	"os"
 	"io"
 	"github.com/30x/keymaster/util"
+	"os/exec"
 )
 
 var _ = Describe("templating", func() {
@@ -24,12 +25,18 @@ var _ = Describe("templating", func() {
 
 		bundles = append(bundles, &client.DeploymentBundle{
 			BundleID: "bundle1",
-			URL: "file://../test/testbundle.zip",
+			URL: "",
+			BasePath: "basepath",
+			Target: "http://localhost",
+			VirtualHosts: []string{"localhost:8080"},
 		})
 
 		bundles = append(bundles, &client.DeploymentBundle{
 			BundleID: "bundle2",
-			URL: "file://../test/testbundle.zip",
+			URL: "",
+			BasePath: "basepath2",
+			Target: "http://localhost",
+			VirtualHosts: []string{"localhost:8081"},
 		})
 
 		deployment := &client.Deployment{
@@ -56,6 +63,11 @@ var _ = Describe("templating", func() {
 
 		deploymentErr := nginx.Template(stageDir, deployment)
 		Expect(deploymentErr).To(BeNil())
+
+		// for debugging, writes file to stdout...
+		cmd := exec.Command("cat", nginxConf)
+		cmd.Stdout = os.Stdout
+		cmd.Run()
 
 		err = nginx.TestConfig(stageDir, "nginx.conf")
 		Expect(err).NotTo(HaveOccurred())
