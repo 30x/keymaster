@@ -61,9 +61,10 @@ func Template(deploymentDir string, deployment *client.Deployment) *client.Deplo
 				}
 
 				p := pipe{
-					filePath: filePath,
+					FilePath: filePath,
 					Name:     pipeName,
 					Path:     pipePath,
+					FQName:   b.BundleID + "_" + pipeName,
 				}
 
 				pipes[pipeName] = p
@@ -120,10 +121,10 @@ func runTemplate(fileName string, context interface{}) *client.DeploymentError {
 }
 
 type pipe struct {
-	filePath string
-
+	FilePath string
 	Name string
 	Path string
+	FQName string
 }
 
 type bundle struct {
